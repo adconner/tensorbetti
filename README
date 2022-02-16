@@ -1,0 +1,13 @@
+The ideal computation is implemented. One can tweak the main function to do
+whatever computation is desired. Right now it generates a few random tensors
+of low rank and writes their ideal components to the folder examples/.
+This can be tweaked and run from the command line
+
+$ sage tensorbetti.sage
+
+or interactively
+
+$ sage
+sage: load('tensorbetti.sage')
+
+Code works for at least Sage 9.5, but any version should do.
