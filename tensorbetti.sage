@@ -70,20 +70,6 @@ class TensorBetti:
     def mat_to_ps(self, mat, ms):
         return [sum(a * m for a, m in zip(r, ms)) for r in mat]
 
-    def p_to_vec(self, p):
-        return vector(
-            self.F,
-            binomial(self.R.ngens() + p.degree() - 1, p.degree()),
-            {
-                combinations_with_replacement_alt_rank(
-                    self.R.ngens(),
-                    p.degree(),
-                    [a for a, b in e.sparse_iter() for i in range(b)],
-                ): c
-                for e, c in p.dict().items()
-            },
-        )
-
     @memoize
     def ideal_to(self, d):
         if d < 0:
@@ -93,7 +79,7 @@ class TensorBetti:
         ltI = ideal([p.lm() for p in Ilower.groebner_basis(deg_bound=d)])
         ms = [
             (mi, m)
-            for mi in combinations_with_replacement_alt(self.R.ngens(), d)
+            for mi in combinations_with_replacement(range(self.R.ngens()), d)
             for m in [prod(self.R.gen(i) for i in mi)]
             if m not in ltI
         ]
@@ -117,22 +103,6 @@ class TensorBetti:
             if len(ps) == 0:
                 continue
             open("%sI%d.txt" % (pre, d), "w").write(",\n".join(map(str, ps)) + "\n")
-
-
-def combinations_with_replacement_alt(n, k):
-    assert n > 0
-    ix = [0] * k
-    yield tuple(ix)
-    while True:
-        for s in range(k):
-            if ix[s] < (ix[s + 1] if s + 1 < k else n - 1):
-                ix[s] += 1
-                for l in range(s):
-                    ix[l] = 0
-                break
-        else:
-            return
-        yield tuple(ix)
 
 
 def sum_rank_ones(rank1s, sparse=True):
