@@ -1,36 +1,26 @@
-
-
-def main():
-    n = 5
-    r = 8
-
-    F = GF(5)
-    # F = GF(101)
-    # F = GF(1031)
-    # F = GF(32003)
-    # F = GF(65537)
-
-    
-    for r in [5..9]:
-        for run in range(3):
-            T = random_tensor(F, n, r)
-            # T=[random_matrix(F,n,n) for i in range(n)]
-            # T=[random_matrix(ZZ,n,n,x=-100,y=100) for i in range(n)]
-
-            # T = [m.change_ring(F) for m in matrixmult(2,2,2)]
-
-            h = TensorBetti(T)
-            h.write_to(3,'examples/r%drun%d_' % (r,run))
-
 from itertools import *
 from sage.libs.singular.option import opt, opt_ctx
 import sage.libs.singular.function_factory
 
-syz = sage.libs.singular.function_factory.ff.syz
-std = sage.libs.singular.function_factory.ff.std
+sing = sage.libs.singular.function_factory.ff
+std = sing.std
+syz = sing.syz
+res = sing.res
+betti = sing.betti
 
 # see libSingular: Options sagemath
 
+def main():
+    n = 3
+    r = 8
+
+    # F = GF(5)
+    F = GF(101)
+    # F = GF(1031)
+    # F = GF(32003)
+    # F = GF(65537)
+
+    return tensor_betti(random_tensor(F,n,r))
 
 def memoize(obj):
     cache = obj.cache = {}
@@ -45,30 +35,17 @@ def memoize(obj):
 
     return memoizer
 
-
-class TensorBetti:
-    def __init__(self, T):
-        self.T = T
-        self.n = T[0].nrows()
-        self.F = T[0].base_ring()
-        self.R = PolynomialRing(
-            FractionField(self.F),
-            ["m%d%d" % (i, j) for i, j in product(range(self.n), range(self.n))],
-        )
-
-    def samp(self):
-        return (
-            sum(e * m for e, m in zip(random_vector(self.F, self.n), self.T))
-            .adjugate()
-            .list()
-        )
+class ParameterizedVariety:
+    def __init__(self, samp):
+        self.samp = samp
+        v = samp()
+        self.n = len(v)
+        self.F = v[0].parent()
+        self.R = PolynomialRing(self.F,'x',self.n)
 
     def sampm(self, mis):
         s = self.samp()
         return [prod(s[i] for i in mi) for mi in mis]
-
-    def mat_to_ps(self, mat, ms):
-        return [sum(a * m for a, m in zip(r, ms)) for r in mat]
 
     @memoize
     def ideal_to(self, d):
@@ -86,9 +63,9 @@ class TensorBetti:
         print("%d monomials undetermined" % len(ms))
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
         eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
-        pscur = self.mat_to_ps(eqs.right_kernel_matrix(), ms)
+        pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
         gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
-        return ideal(gbto)
+        return self.R.ideal(gbto)
 
     @memoize
     def Id_mod_lower_basis(self, d):
@@ -103,6 +80,13 @@ class TensorBetti:
             if len(ps) == 0:
                 continue
             open("%sI%d.txt" % (pre, d), "w").write(",\n".join(map(str, ps)) + "\n")
+
+def tensor_betti(T):
+    F = T[0].base_ring()
+    n = T[0].nrows()
+    def samp():
+        return sum(e * m for e, m in zip(random_vector(F, n), T)).adjugate().list()
+    return ParameterizedVariety(samp)
 
 
 def sum_rank_ones(rank1s, sparse=True):
@@ -122,6 +106,6 @@ def random_tensor(F, n, r):
 
 
 if __name__ == "__main__":
-    main()
+    h = main()
 
 # vim: ft=python
