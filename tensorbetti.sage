@@ -11,16 +11,18 @@ betti = sing.betti
 # see libSingular: Options sagemath
 
 def main():
-    n = 3
-    r = 8
+    n = 5
+    r = 10
+    dim = 16
 
     # F = GF(5)
-    F = GF(101)
+    # F = GF(101)
     # F = GF(1031)
-    # F = GF(32003)
+    F = GF(32003)
     # F = GF(65537)
 
-    return tensor_betti(random_tensor(F,n,r))
+    # opt['prot'] = True
+    return generic_project(Tinv(random_tensor(F,n,r)),dim)
 
 def memoize(obj):
     cache = obj.cache = {}
@@ -81,13 +83,18 @@ class ParameterizedVariety:
                 continue
             open("%sI%d.txt" % (pre, d), "w").write(",\n".join(map(str, ps)) + "\n")
 
-def tensor_betti(T):
+def Tinv(T):
     F = T[0].base_ring()
     n = T[0].nrows()
     def samp():
         return sum(e * m for e, m in zip(random_vector(F, n), T)).adjugate().list()
     return ParameterizedVariety(samp)
 
+def generic_project(V,dim):
+    P = random_matrix(V.F,dim,V.n)
+    def samp():
+        return (P*vector(V.samp())).list()
+    return ParameterizedVariety(samp)
 
 def sum_rank_ones(rank1s, sparse=True):
     from operator import add
