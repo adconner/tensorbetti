@@ -22,7 +22,17 @@ def main():
     # F = GF(65537)
 
     # opt['prot'] = True
-    return generic_project(Tinv(random_tensor(F,n,r)),dim)
+
+    # return dual_tensor(random_tensor(F,n,r))
+    # return Tinv(random_tensor(F,n,r))
+    return Tinv(dual_tensor(random_tensor(F,n,r)))
+    # return generic_project(Tinv(dual_tensor(random_tensor(F,n,r))),dim)
+
+    # for r in range(4,10):
+    #     print (n,r)
+    #     I = Tinv(dual_tensor(random_tensor(F,n,r))).ideal_to(4)
+    #     print (betti(syz(I)))
+
 
 def memoize(obj):
     cache = obj.cache = {}
@@ -85,7 +95,7 @@ class ParameterizedVariety:
 
 def Tinv(T):
     F = T[0].base_ring()
-    n = T[0].nrows()
+    n = len(T)
     def samp():
         return sum(e * m for e, m in zip(random_vector(F, n), T)).adjugate().list()
     return ParameterizedVariety(samp)
@@ -111,6 +121,9 @@ def random_tensor(F, n, r):
         [tuple(random_vector(F, n) for j in range(3)) for i in range(r)]
     )
 
+def dual_tensor(T):
+    K = matrix([m.list() for m in T]).right_kernel_matrix()
+    return [matrix(K.base_ring(),T[0].nrows(),T[0].ncols(),list(r)) for r in K] 
 
 if __name__ == "__main__":
     h = main()
