@@ -11,8 +11,8 @@ betti = sing.betti
 # see libSingular: Options sagemath
 
 def main():
-    n = 5
-    r = 10
+    n = 4
+    r = 4
     dim = 16
 
     # F = GF(5)
@@ -25,7 +25,11 @@ def main():
 
     # return dual_tensor(random_tensor(F,n,r))
     # return Tinv(random_tensor(F,n,r))
-    return Tinv(dual_tensor(random_tensor(F,n,r)))
+    # return Tinv(dual_tensor(random_tensor(F,n,r)))
+
+    F4 = Fn_poly(F,n**2,4)
+    return gauss_map(random_tensor(F,n,r),F4)
+
     # return generic_project(Tinv(dual_tensor(random_tensor(F,n,r))),dim)
 
     # for r in range(4,10):
@@ -93,6 +97,7 @@ class ParameterizedVariety:
                 continue
             open("%sI%d.txt" % (pre, d), "w").write(",\n".join(map(str, ps)) + "\n")
 
+# Given a tensor, returns the parameterized variety Tinv
 def Tinv(T):
     F = T[0].base_ring()
     n = len(T)
@@ -100,11 +105,26 @@ def Tinv(T):
         return sum(e * m for e, m in zip(random_vector(F, n), T)).adjugate().list()
     return ParameterizedVariety(samp)
 
+# returns the parameterized variety of the gauss map of p applied to the linear
+# subspace
+def gauss_map(T,p):
+    F = T[0].base_ring()
+    a = len(T)
+    partials = [p.derivative(x) for x in p.parent().gens()]
+    def samp():
+        m = sum(e * m for e, m in zip(random_vector(F, a), T)).list()
+        return [q(m) for q in partials]
+    return ParameterizedVariety(samp)
+
 def generic_project(V,dim):
     P = random_matrix(V.F,dim,V.n)
     def samp():
         return (P*vector(V.samp())).list()
     return ParameterizedVariety(samp)
+
+def Fn_poly(F,dim,n):
+    R = PolynomialRing(F,'x',dim)
+    return sum(prod(m) for m in combinations_with_replacement(R.gens(),n-1))
 
 def sum_rank_ones(rank1s, sparse=True):
     from operator import add
