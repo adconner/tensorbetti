@@ -90,7 +90,7 @@ class ParameterizedVariety:
         return [p for p in self.ideal_to(d).gens() if p.lm() not in ltlower]
 
     def write_to(self, deg, pre="examples/"):
-        open("%sT.txt" % pre, "w").write(str([map(list, m) for m in self.T]) + "\n")
+        # open("%sT.txt" % pre, "w").write(str([map(list, m) for m in self.T]) + "\n")
         for d in range(deg + 1):
             ps = self.Id_mod_lower_basis(d)
             if len(ps) == 0:
