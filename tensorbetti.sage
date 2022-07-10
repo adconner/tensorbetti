@@ -1,6 +1,7 @@
 from itertools import *
 from sage.libs.singular.option import opt, opt_ctx
 import sage.libs.singular.function_factory
+from sys import stdout
 
 sing = sage.libs.singular.function_factory.ff
 std = sing.std
@@ -76,10 +77,12 @@ class ParameterizedVariety:
             for m in [prod(self.R.gen(i) for i in mi)]
             if m not in ltI
         ]
-        print("%d monomials undetermined" % len(ms))
+        print("%d monomials undetermined, " % len(ms),end="")
+        stdout.flush()
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
         eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
         pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
+        print ("%d relations found" % len(pscur))
         gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
         return self.R.ideal(gbto)
 
