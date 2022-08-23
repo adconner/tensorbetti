@@ -22,14 +22,12 @@ jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]
 minorsize = 12
 jacm = random_matrix(F,minorsize,jac.nrows())*jac*random_matrix(F,jac.ncols(),minorsize)
 
-
 def reduce_fn_memo(I):
     ltI = ideal([p.lt() for p in I.groebner_basis()])
     maxgbgen = max(p.degree() for p in ltI.gens())
     # assume m = n*x, n not in ltI and x a variable
     @cache
     def reduce1(m):
-        print ('reduce',m)
         if m.degree() <= maxgbgen:
             return I.reduce(m)
 
@@ -54,12 +52,13 @@ def reduce_fn_memo(I):
         # ml*x > mlx
         # m = ml*x*y > mlx*y
         res = sum([mlx.monomial_coefficient(n) * reduce1(n*y) for n in mlx.monomials()])
-        assert all(m not in ltI for m in res.monomials())
+        print ('reduce',m)
         return res
     def reduce(p): # reduction of lin*pnormal mod I
-        print ('reduce_poly')
         return sum([p.monomial_coefficient(m)*reduce1(m) for m in p.monomials()])
     return reduce
+
+my_reduce = reduce_fn_memo(I)
 
 def det_red(m,I,reduce=None):
     if reduce is None:
