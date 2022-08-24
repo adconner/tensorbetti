@@ -121,7 +121,7 @@ def reduce_fn_memo(I):
         print ('reduce',m)
         return res
     def reduce(p): # reduction of lin*pnormal mod I
-        return sum([p.monomial_coefficient(m)*reduce1(m) for m in p.monomials()])
+        return p.parent().sum([p.monomial_coefficient(m)*reduce1(m) for m in p.monomials()])
     return reduce
 
 my_reduce = reduce_fn_memo(I)
