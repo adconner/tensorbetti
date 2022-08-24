@@ -22,6 +22,30 @@ jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]
 minorsize = 12
 jacm = random_matrix(F,minorsize,jac.nrows())*jac*random_matrix(F,jac.ncols(),minorsize)
 
+# looks for row permutation and column GL putting m in approximately upper triangular form
+def simplify_polynomial_matrix(M):
+    mons = sorted(set([m for p in M.list() for m in p.monomials()]))
+    def to_vec(p):
+        return [p.coefficient(m) for m in mons]
+    F = M.base_ring().base_ring()
+    j = 0
+    for i in range(M.nrows()):
+        print (i,j)
+        if j == M.ncols():
+            break
+        i2 = min(range(i,M.nrows()),key=
+                 lambda i2: (matrix([to_vec(p) for p in M[i2,j:].list()]).rank(),i2))
+        M.swap_rows(i,i2)
+        Mrow = matrix([to_vec(p) for p in M[i,j:].list()])
+        r = Mrow.rank()
+        Mrow = Mrow.augment(identity_matrix(F,Mrow.nrows()),subdivide=True)
+        Mrow.echelonize()
+        act = Mrow.subdivision(0,1)
+        M = M*block_diagonal_matrix([identity_matrix(F,j),act.T])
+        j += r
+    return M
+        
+
 def reduce_fn_memo(I):
     ltI = ideal([p.lt() for p in I.groebner_basis()])
     maxgbgen = max(p.degree() for p in ltI.gens())
