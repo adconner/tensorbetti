@@ -2,6 +2,8 @@ from itertools import *
 from functools import cache
 from IPython import embed
 
+load_attach_mode(load_debug=True)
+
 load('tensorbetti.sage')
 load('minors_ideal.sage')
 
@@ -19,8 +21,48 @@ h = Tinv(random_tensor(F,n,r))
 I = h.ideal_to(2)
 jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
 
+# x0 = h.samp()
+# jact = jac.T
+# jact = random_matrix(F,16,16)*jact
+# jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
+# jact = simplify_polynomial_matrix(jact)
+
 minorsize = 12
 jacm = random_matrix(F,minorsize,jac.nrows())*jac*random_matrix(F,jac.ncols(),minorsize)
+
+def generic_sparse_minor_samp(M,minorsize):
+    mons = sorted(set([m for p in M.list() for m in p.monomials()]))
+    def to_vec(p):
+        return [p.coefficient(m) for m in mons]
+    F = M.base_ring().base_ring()
+    M = random_matrix(F,minorsize,M.nrows())*M
+    js = [0]
+    for i in range(M.nrows()):
+        j = js[-1]
+        print (i,j)
+        if j == M.ncols():
+            js.extend([M.ncols()]*(M.nrows()-i))
+            break
+        Mrow = matrix([to_vec(p) for p in M[i,j:].list()])
+        r = Mrow.rank()
+        Mrow = Mrow.augment(identity_matrix(F,Mrow.nrows()),subdivide=True)
+        Mrow.echelonize()
+        act = Mrow.subdivision(0,1)
+        M = M*block_diagonal_matrix([identity_matrix(F,j),act.T])
+        js.append(j+r)
+    rtrans = random_matrix(F,M.ncols(),minorsize)
+    for j in range(minorsize-1,-1,-1):
+        # in order that the lower right j:,j: block has nontrivial determinant, must choose 
+        # js[k] so that minorsize-k >= minorsize-j and (js[k] < M.ncols() and js[k] < js[k+1])
+        # for now, choose js[k] largest satisfying this property (giving most
+        # sparse, least general jacobian)
+        k = j
+        while k >= 0 and (js[k] == M.ncols() or js[k] == js[k+1]):
+            k -= 1
+        assert js[k] < M.ncols() and js[k] < js[k+1]
+        rtrans[:js[k],j] = 0
+    return M*rtrans
+    
 
 # looks for row permutation and column GL putting m in approximately upper triangular form
 def simplify_polynomial_matrix(M):
@@ -95,7 +137,7 @@ def det_red(m,I,reduce=None):
         if len(cols) == 0:
             return I.ring().one()
         i = m.nrows() - len(cols)
-        p = sum([(-1)**ji * m[i,j]*minor(cols[:ji]+cols[ji+1:]) for ji,j in enumerate(cols)])
+        p = sum([(-1)**ji * m[i,j]*minor(cols[:ji]+cols[ji+1:]) for ji,j in enumerate(cols) if not m[i,j].is_zero()])
         p = reduce(p)
         print (cols,len(p.monomials()))
         return p
