@@ -52,14 +52,17 @@ def generic_sparse_minor_samp(M,minorsize):
         js.append(j+r)
     rtrans = random_matrix(F,M.ncols(),minorsize)
     for j in range(minorsize-1,-1,-1):
-        # in order that the lower right j:,j: block has nontrivial determinant, must choose 
+        # in order that the lower right j:,j: block has nontrivial determinant, necessary to choose 
         # js[k] so that minorsize-k >= minorsize-j and (js[k] < M.ncols() and js[k] < js[k+1])
+        # and M.ncols() - js[k] >= minorsize-j
         # for now, choose js[k] largest satisfying this property (giving most
         # sparse, least general jacobian)
         k = j
-        while k >= 0 and (js[k] == M.ncols() or js[k] == js[k+1]):
+        cond = lambda k: js[k] < M.ncols() and js[k] < js[k+1] and \
+            M.ncols() - js[k] >= minorsize - j
+        while k >= 0 and not cond(k):
             k -= 1
-        assert js[k] < M.ncols() and js[k] < js[k+1]
+        assert cond(k)
         rtrans[:js[k],j] = 0
     return M*rtrans
     
