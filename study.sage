@@ -30,6 +30,12 @@ jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]
 minorsize = 12
 jacm = random_matrix(F,minorsize,jac.nrows())*jac*random_matrix(F,jac.ncols(),minorsize)
 
+def get_mat(ps):
+    mons = sorted(set(m for p in ps for m in p.monomials()))
+    mons.reverse()
+    print (1)
+    return matrix([[p.monomial_coefficient(m) for m in mons] for p in ps])
+
 def generic_sparse_minor_samp(M,minorsize):
     mons = sorted(set([m for p in M.list() for m in p.monomials()]))
     def to_vec(p):
@@ -65,6 +71,34 @@ def generic_sparse_minor_samp(M,minorsize):
         assert cond(k)
         rtrans[:js[k],j] = 0
     return M*rtrans
+
+# M from simplify_polynomial_matrix
+def generic_sparse_minor_samp2(M,minorsize):
+    js = [0]
+    j = 0
+    for r in M:
+        while j < len(r) and not r[j].is_zero():
+            j += 1
+        js.append(j)
+    print (js)
+    ltrans = random_matrix(F,minorsize,M.nrows())
+    rtrans = random_matrix(F,M.ncols(),minorsize)
+    for j in range(minorsize-1,-1,-1):
+        # k: number of zero entries beginning jth column
+        # in order that the lower right j:,j: block has nontrivial determinant, necessary to choose 
+        # js[k] so that minorsize-k >= minorsize-j and (js[k] < M.ncols() and js[k] < js[k+1])
+        # and M.ncols() - js[k] >= minorsize-j
+        # for now, choose js[k] largest satisfying this property (giving most
+        # sparse, least general jacobian)
+        k = j
+        cond = lambda k: js[k] < M.ncols() and js[k] < js[k+1] and \
+            M.ncols() - js[k] >= minorsize - j
+        while k >= 0 and not cond(k):
+            k -= 1
+        assert cond(k)
+        rtrans[:js[k],j] = 0
+        ltrans[:k,k:] = 0
+    return ltrans*M,rtrans
     
 
 # looks for row permutation and column GL putting m in approximately upper triangular form
