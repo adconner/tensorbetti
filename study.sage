@@ -98,7 +98,7 @@ def generic_sparse_minor_samp2(M,minorsize):
         assert cond(k)
         rtrans[:js[k],j] = 0
         ltrans[:k,k:] = 0
-    return ltrans*M,rtrans
+    return ltrans*M*rtrans
     
 
 # looks for row permutation and column GL putting m in approximately upper triangular form
