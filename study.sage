@@ -181,41 +181,118 @@ def det_red(m,I,reduce=None):
     return minor(tuple(range(m.ncols())))
 
 
-def mult_maps(I,dupto):
-    allmons = { 0 : [I.ring().one()] }
-    allmonsix = { 0: { I.ring().one() : 0 } }
-    allmats = { }
-            
-    for d in range(1,dupto+1):
-        print(d)
-        mons = []
-        monsix = {}
-        def get(m):
-            if m not in monsix:
-                monsix[m] = len(mons)
-                mons.append(m)
-            return monsix[m]
-        mats = []
-        for x in I.ring().gens():
-            print(x)
-            mat = {}
-            for mi,m in enumerate(allmons[d-1]):
-                mr = m*x
-                if mr in monsix:
-                    mat[(mi,monsix[mr])] = 1
+def mult_maps(I):
+    R = I.ring()
+    F = R.base_ring()
+    ltI = ideal([p.lt() for p in I.groebner_basis()])
+    gbmaxd = max([p.degree() for p in I.groebner_basis()])
+    xsix = {x:i for i,x in enumerate(R.gens())}
+
+    @cache
+    def mons(d):
+        print('mons',d)
+        if d == 0:
+            return ((R.one(),),())
+        monsout = set()
+        monsin = set()
+        for m in mons(d-1)[0]:
+            for x in R.gens():
+                n = m*x
+                if n in ltI:
+                    monsin.add(n)
                 else:
-                    mrred = reduce(mr)
-                    if mr == mrred:
-                        mat[(mi,get(mr))] = 1
-                    else:
-                        for n,c in mrred.dict().items():
-                            mat[(mi,get(I.ring().monomial(*n)))] = c
-            mats.append(mat)
-        mats = [matrix(I.base_ring(),len(allmons[d-1]),len(mons),mat) for mat in mats]
-        allmats[d] = mats
-        allmons[d] = mons
-        allmonsix[d] = monsix
-    return allmons,allmonsix,allmats
+                    monsout.add(n)
+        return (tuple(sorted(monsout,reverse=True)),tuple(sorted(monsin,reverse=True)))
+    @cache
+    def monsix(d):
+        print('monsix',d)
+        monsout,monsin = mons(d)
+        return ({m:i for i,m in enumerate(monsout)}, {m:i for i,m in enumerate(monsin)})
+    @cache
+    def reducemap(d):
+        print('reducemap',d)
+        monsout,monsin = mons(d)
+        if d <= gbmaxd:
+            mat = []
+            for m in monsin:
+                p = I.reduce(m)
+                mat.append([p.monomial_coefficient(n) for n in monsout])
+            return matrix(F,mat).T
+
+        # each monomial, divide by y staying in ltI, reduce there, multiply by y, then reduce here (using only lower monomials)
+
+        seen = set()
+        divmaps = []
+        for yi,y in enumerate(R.gens()):
+            cur = {}
+            for mli,ml in enumerate(mons(d-1)[1]):
+                n = ml*y
+                if n in monsix(d)[1] and n not in seen:
+                    seen.add(n)
+                    cur[(mli,monsix(d)[1][n])] = 1
+            divmaps.append(matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur))
+
+        matbig = matrix(F, len(monsin)+len(monsout), len(monsin)+len(monsout),sparse=False)
+        div = len(monsin)
+        matbig[div:,div:] = identity_matrix(F,len(monsout))
+        for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
+            print(yi,end=" ",flush=True)
+            stdout.flush()
+            multmap = block_matrix([[intoin] ,[intoout]])
+            jxs = sorted([j for (i,j) in divmap.dict().keys()])
+            rhs = multmap*reducemap(d-1)*divmap[:,jxs]
+            matbig[:,jxs] = rhs
+        while not matbig[:div,:div].is_zero():
+            print('squaring',end=" ",flush=True)
+            matbig = matbig**2
+        print()
+        return matbig[div:,:div]
+
+        # ymls = {}
+        # for mli,ml in enumerate(mons(d-1)[1]):
+        #     for yi,y in enumerate(R.gens()):
+        #         ymls[ml*y] = (yi,mli)
+        # maps = mult_maps_noreduce(d-1)
+        # mat = matrix(F,len(monsout),len(monsin),sparse=True)
+        # for mi in range(len(monsin)-1,-1,-1):
+        #     m = monsin[mi]
+        #     print(m)
+        #     yi,mli = ymls[m]
+        #     mlred = reducemap(d-1).column(mli)
+        #     intoout, intoin = maps[yi]
+
+        #     # assert (intoin*mlred)[:mi+1].is_zero()
+        #     mat[:,mi] += (mat[:,mi+1:]*intoin[mi+1:]*mlred).column()
+        #     mat[:,mi] += (intoout*mlred).column()
+        # return mat
+
+    @cache 
+    def mult_maps_noreduce(d): # d -> d+1
+        print('mult_maps_noreduce',d)
+        mlo, _ = mons(d)
+        monsout, monsin = mons(d+1)
+        monsoutix, monsinix = monsix(d+1)
+        maps = []
+        for x in R.gens():
+            intoin = {}
+            intoout = {}
+            # map = matrix(F,len(monsout),len(mlo))
+            for mi,m in enumerate(mlo):
+                n = m*x
+                if n in monsinix:
+                    intoin[(monsinix[n],mi)] = 1
+                else:
+                    intoout[(monsoutix[n],mi)] = 1
+            intoin = matrix(F,len(monsin),len(mlo),intoin)
+            intoout = matrix(F,len(monsout),len(mlo),intoout)
+            maps.append((intoout,intoin))
+        return maps
+    @cache
+    def mult_maps_reduce(d): # d -> d+1
+        print('mult_maps_reduce',d)
+        return [reducemap(d+1)*intoin + intoout for intoout,intoin in mult_maps_noreduce(d)]
+    return mult_maps_reduce,mult_maps_noreduce,reducemap,mons
+
 
 def upper_tri_assume_all_generic(m,I):
     F = I.ring().base_ring()
