@@ -180,6 +180,30 @@ def det_red(m,I,reduce=None):
         return p
     return minor(tuple(range(m.ncols())))
 
+def det_red_batch(ms,I,mult_map=None):
+    if mult_map is None:
+        mult_map = mult_maps(I)[0]
+    n = ms[0].nrows()
+    R = I.ring()
+    F = R.base_ring()
+    m = [[ matrix(F,[[m[i,j].monomial_coefficient(x) for x in R.gens()] for m in ms]).T 
+        for j in range(n)] for i in range(n)]
+
+    def multiply(x,p,d):
+        assert x.ncols() == p.ncols()
+        return mult_map(d) * matrix(F,[a.outer_product(b).list() 
+                for a,b in zip(x.columns(),p.columns())]).T
+        
+    @cache
+    def minor(cols):
+        print ('minor',cols)
+        if len(cols) == 0:
+            return matrix(F,1,len(ms),[R.one()]*len(ms))
+        i = n - len(cols)
+        p = sum([(-1)**ji * multiply(m[i][j],minor(cols[:ji]+cols[ji+1:]),len(cols)-1) for ji,j in enumerate(cols) if not m[i][j].is_zero()])
+        print (cols,p.nrows())
+        return p
+    return minor(tuple(range(n)))
 
 def mult_maps(I):
     R = I.ring()
@@ -217,7 +241,7 @@ def mult_maps(I):
             for m in monsin:
                 p = I.reduce(m)
                 mat.append([p.monomial_coefficient(n) for n in monsout])
-            return matrix(F,mat).T
+            return matrix(F,len(monsin),len(monsout),mat).T
 
         # each monomial, divide by y staying in ltI, reduce there, multiply by y, then reduce here (using only lower monomials)
 
@@ -291,7 +315,10 @@ def mult_maps(I):
     def mult_maps_reduce(d): # d -> d+1
         print('mult_maps_reduce',d)
         return [reducemap(d+1)*intoin + intoout for intoout,intoin in mult_maps_noreduce(d)]
-    return mult_maps_reduce,mult_maps_noreduce,reducemap,mons
+    @cache
+    def mult_map(d):
+        return block_matrix([[m for m in mult_maps_reduce(d)]])
+    return mult_map,mult_maps_reduce,mult_maps_noreduce,reducemap,mons
 
 
 def upper_tri_assume_all_generic(m,I):
