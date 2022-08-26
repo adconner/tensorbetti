@@ -231,9 +231,8 @@ def mult_maps(I):
                     cur[(mli,monsix(d)[1][n])] = 1
             divmaps.append(matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur))
 
-        # rels = block_matrix([[identity_matrix(F,len(monsin),sparse=True),
-        #                         matrix(F,len(monsin),len(monsout),sparse=True)]])
-        rels = matrix(F,len(monsin),len(monsin)+len(monsout))
+        rels = block_matrix([[identity_matrix(F,len(monsin),sparse=True),
+                                matrix(F,len(monsin),len(monsout),sparse=True)]])
         for i in range(len(monsin)):
             rels[i,i] = 1
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
