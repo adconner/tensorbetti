@@ -113,24 +113,13 @@ def reduce_fn_memo(I):
         if m not in ltI:
             return m
 
-        # exists by assumption on m
-        x = next(x for x in m.variables() if m.quo_rem(x)[0] not in ltI)
         # exists since there are no generators of ltI in this degree
-        y = next(y for y in m.variables() if m.quo_rem(y)[0] in ltI)
+        y = next(y for y in m.variables()[::-1] if m.quo_rem(y)[0] in ltI)
 
-        ml = m.quo_rem(x*y)[0]
-        # ml not in ltI
-        # ml*y not in ltI
-        # ml*x in ltI
-        # ml*x*y == m in ltI
+        ml = m.quo_rem(y)[0]
+        ml = reduce1(ml)
 
-        # call is smaller because
-        mlx = reduce1(ml*x)
-
-        # all calls smaller because
-        # ml*x > mlx
-        # m = ml*x*y > mlx*y
-        res = sum([mlx.monomial_coefficient(n) * reduce1(n*y) for n in mlx.monomials()])
+        res = sum([ml.monomial_coefficient(n) * reduce1(n*y) for n in ml.monomials()])
         print ('reduce',m)
         return res
     def reduce(p): # reduction of lin*pnormal mod I
