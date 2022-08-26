@@ -232,21 +232,22 @@ def mult_maps(I):
                     cur[(mli,monsix(d)[1][n])] = 1
             divmaps.append(matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur))
 
-        matbig = matrix(F, len(monsin)+len(monsout), len(monsin)+len(monsout),sparse=False)
-        div = len(monsin)
-        matbig[div:,div:] = identity_matrix(F,len(monsout))
+        matii = matrix(F, len(monsin), len(monsin) ,sparse=True)
+        matoi = matrix(F, len(monsout), len(monsin) ,sparse=False)
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             print(yi,end=" ",flush=True)
-            stdout.flush()
-            multmap = block_matrix([[intoin] ,[intoout]])
+            # multmap = block_matrix([[intoin] ,[intoout]])
             jxs = sorted([j for (i,j) in divmap.dict().keys()])
-            rhs = multmap*reducemap(d-1)*divmap[:,jxs]
-            matbig[:,jxs] = rhs
-        while not matbig[:div,:div].is_zero():
-            print('squaring',end=" ",flush=True)
-            matbig = matbig**2
+            rhs = reducemap(d-1)*divmap[:,jxs]
+            matii[:,jxs] = intoin*rhs 
+            matoi[:,jxs] = intoout*rhs
+        while not matii.is_zero():
+            print('squaring',end="",flush=True)
+            matoi += matoi*matii
+            print("..",end=" ",flush=True)
+            matii = matii**2
         print()
-        return matbig[div:,:div]
+        return matoi
 
         # ymls = {}
         # for mli,ml in enumerate(mons(d-1)[1]):
