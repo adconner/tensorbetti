@@ -8,13 +8,12 @@ load('tensorbetti.sage')
 load('minors_ideal.sage')
 
 def get_mat(ps):
-    mons = sorted(set(m for p in ps for m in p.monomials()))
-    mons.reverse()
+    mons = sorted(set(m for p in ps for m in p.monomials()),reverse=True)
     print (1)
     return matrix([[p.monomial_coefficient(m) for m in mons] for p in ps])
 
 def generic_sparse_minor_samp(M,minorsize):
-    mons = sorted(set([m for p in M.list() for m in p.monomials()]))
+    mons = sorted(set([m for p in M.list() for m in p.monomials()]),reverse=True)
     def to_vec(p):
         return [p.coefficient(m) for m in mons]
     F = M.base_ring().base_ring()
