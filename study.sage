@@ -7,29 +7,6 @@ load_attach_mode(load_debug=True)
 load('tensorbetti.sage')
 load('minors_ideal.sage')
 
-a = 4
-n = 4
-r = 7
-
-# F = GF(5)
-# F = GF(101)
-# F = GF(1031)
-F = GF(32003)
-# F = GF(65537)
-
-h = Tinv(random_tensor(F,n,r))
-I = h.ideal_to(2)
-jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
-
-# x0 = h.samp()
-# jact = jac.T
-# jact = random_matrix(F,16,16)*jact
-# jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
-# jact = simplify_polynomial_matrix(jact)
-
-minorsize = 12
-jacm = random_matrix(F,minorsize,jac.nrows())*jac*random_matrix(F,jac.ncols(),minorsize)
-
 def get_mat(ps):
     mons = sorted(set(m for p in ps for m in p.monomials()))
     mons.reverse()
@@ -161,7 +138,6 @@ def reduce_fn_memo(I):
         return p.parent().sum([p.monomial_coefficient(m)*reduce1(m) for m in p.monomials()])
     return reduce
 
-my_reduce = reduce_fn_memo(I)
 
 def det_red(m,I,reduce=None):
     if reduce is None:
@@ -366,6 +342,30 @@ def upper_tri_assume_all_generic_mult(m,I):
         print ('simplified')
 
     return (I,m)
+
+
+a = 4
+n = 4
+r = 7
+
+# F = GF(5)
+# F = GF(101)
+# F = GF(1031)
+F = GF(32003)
+# F = GF(65537)
+
+h = Tinv(random_tensor(F,n,r))
+I = h.ideal_to(2)
+jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
+
+x0 = h.samp()
+jact = jac.T
+jact = random_matrix(F,16,16)*jact
+jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
+jact = simplify_polynomial_matrix(jact)
+
+my_reduce = reduce_fn_memo(I)
+mult_map,mult_maps_reduce,mult_maps_noreduce,reducemap,mons = mult_maps(I)
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
