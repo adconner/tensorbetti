@@ -236,6 +236,7 @@ def mult_maps(I):
                                 matrix(F,len(monsin),len(monsout),sparse=True)]])
         for i in range(len(monsin)):
             rels[i,i] = 1
+        rprev = reducemap(d-1)
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             if len(divmap.dict()) == 0:
                 continue
@@ -245,7 +246,7 @@ def mult_maps(I):
             ixs.sort()
             jxs = [j for i,j in divmap.dict().keys()]
             jxs.sort()
-            rhs = multmap[ixs,:]*reducemap(d-1)*divmap[:,jxs]
+            rhs = multmap[ixs,:]*rprev*divmap[:,jxs]
             print(rhs.dimensions(),RDF(rhs.density()))
             rels[jxs, ixs] = rhs.T
         print("solving",rels.dimensions())
