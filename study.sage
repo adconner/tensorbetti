@@ -231,40 +231,22 @@ def mult_maps(I):
                     cur[(mli,monsix(d)[1][n])] = 1
             divmaps.append(matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur))
 
-        matii = matrix(F, len(monsin), len(monsin) ,sparse=True)
-        matoi = matrix(F, len(monsout), len(monsin) ,sparse=False)
+        # rels = block_matrix([[identity_matrix(F,len(monsin),sparse=True),
+        #                         matrix(F,len(monsin),len(monsout),sparse=True)]])
+        rels = matrix(F,len(monsin),len(monsin)+len(monsout))
+        for i in range(len(monsin)):
+            rels[i,i] = 1
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             print(yi,end=" ",flush=True)
-            # multmap = block_matrix([[intoin] ,[intoout]])
-            jxs = sorted([j for (i,j) in divmap.dict().keys()])
-            rhs = reducemap(d-1)*divmap[:,jxs]
-            matii[:,jxs] = intoin*rhs 
-            matoi[:,jxs] = intoout*rhs
-        while not matii.is_zero():
-            print('squaring',end="",flush=True)
-            matoi += matoi*matii
-            print("..",end=" ",flush=True)
-            matii = matii**2
-        print()
-        return matoi
-
-        # ymls = {}
-        # for mli,ml in enumerate(mons(d-1)[1]):
-        #     for yi,y in enumerate(R.gens()):
-        #         ymls[ml*y] = (yi,mli)
-        # maps = mult_maps_noreduce(d-1)
-        # mat = matrix(F,len(monsout),len(monsin),sparse=True)
-        # for mi in range(len(monsin)-1,-1,-1):
-        #     m = monsin[mi]
-        #     print(m)
-        #     yi,mli = ymls[m]
-        #     mlred = reducemap(d-1).column(mli)
-        #     intoout, intoin = maps[yi]
-
-        #     # assert (intoin*mlred)[:mi+1].is_zero()
-        #     mat[:,mi] += (mat[:,mi+1:]*intoin[mi+1:]*mlred).column()
-        #     mat[:,mi] += (intoout*mlred).column()
-        # return mat
+            multmap = block_matrix([[-intoin],[intoout]])
+            ixs = [i for i,j in multmap.dict().keys()]
+            jxs = [j for i,j in divmap.dict().keys()]
+            rhs = multmap[ixs,:]*reducemap(d-1)*divmap[:,jxs]
+            print(rhs.dimensions(),rhs.density().n())
+            rels[jxs, ixs] = rhs.T
+        print("solving",rels.dimensions())
+        rels.echelonize()
+        return rels[:,len(monsin):].T.dense_matrix()
 
     @cache 
     def mult_maps_noreduce(d): # d -> d+1
