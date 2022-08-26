@@ -221,15 +221,16 @@ def mult_maps(I):
         # each monomial, divide by y staying in ltI, reduce there, multiply by y, then reduce here (using only lower monomials)
 
         seen = set()
-        divmaps = []
-        for yi,y in enumerate(R.gens()):
+        divmaps = [None for yi in range(R.ngens())]
+        for yi in range(R.ngens()-1,-1,-1):
+            y = R.gen(yi)
             cur = {}
             for mli,ml in enumerate(mons(d-1)[1]):
                 n = ml*y
                 if n in monsix(d)[1] and n not in seen:
                     seen.add(n)
                     cur[(mli,monsix(d)[1][n])] = 1
-            divmaps.append(matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur))
+            divmaps[yi] = matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur)
 
         rels = block_matrix([[identity_matrix(F,len(monsin),sparse=True),
                                 matrix(F,len(monsin),len(monsout),sparse=True)]])
@@ -243,7 +244,7 @@ def mult_maps(I):
             jxs = [j for i,j in divmap.dict().keys()]
             jxs.sort()
             rhs = multmap[ixs,:]*reducemap(d-1)*divmap[:,jxs]
-            print(rhs.dimensions(),rhs.density().n())
+            print(rhs.dimensions(),RDF(rhs.density()))
             rels[jxs, ixs] = rhs.T
         print("solving",rels.dimensions())
         rels.echelonize()
