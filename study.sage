@@ -240,7 +240,9 @@ def mult_maps(I):
             print(yi,end=" ",flush=True)
             multmap = block_matrix([[-intoin],[intoout]])
             ixs = [i for i,j in multmap.dict().keys()]
+            ixs.sort()
             jxs = [j for i,j in divmap.dict().keys()]
+            jxs.sort()
             rhs = multmap[ixs,:]*reducemap(d-1)*divmap[:,jxs]
             print(rhs.dimensions(),rhs.density().n())
             rels[jxs, ixs] = rhs.T
