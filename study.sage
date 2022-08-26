@@ -237,6 +237,8 @@ def mult_maps(I):
         for i in range(len(monsin)):
             rels[i,i] = 1
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
+            if len(divmap.dict()) == 0:
+                continue
             print(yi,end=" ",flush=True)
             multmap = block_matrix([[-intoin],[intoout]])
             ixs = [i for i,j in multmap.dict().keys()]
