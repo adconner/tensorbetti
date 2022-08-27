@@ -234,10 +234,16 @@ def mult_maps(I):
 
             mapiit[[j for _,j in divmap],[i for i,_ in intoin]] = rprevt[[i for i,_ in divmap],[j for _,j in intoin]]
             mapiot[[j for _,j in divmap],[i for i,_ in intoout]] = rprevt[[i for i,_ in divmap],[j for _,j in intoout]]
-        print("solving %d %d.. "% (len(monsin),len(monsout)),end="",flush=True)
+        nnz = len(mapiit.nonzero_positions())
+        print("solving %d %d %d.. "% (nnz, len(monsin),len(monsout)),end="",flush=True)
+        cnt = 0
+        every = nnz // 30
         for i,r in enumerate(mapiit.rows()):
             for i2,e in r.dict().items():
                 mapiot.add_multiple_of_row(i,i2,e)
+                cnt += 1
+                if cnt % every == 0:
+                    print(cnt,end=" ",flush=True)
         # for i,r in enumerate(mapiit.T.rows()):
         #     for i2,e in r.dict().items():
         #         mapiot.add_multiple_of_row(i2,i,e)
