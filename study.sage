@@ -190,7 +190,7 @@ def mult_maps(I):
                     monsin.add(n)
                 else:
                     monsout.add(n)
-        return (tuple(sorted(monsout,reverse=True)),tuple(sorted(monsin,reverse=True)))
+        return (tuple(sorted(monsout)),tuple(sorted(monsin)))
     @cache
     def monsix(d):
         print('monsix',d)
@@ -243,13 +243,12 @@ def mult_maps(I):
             djxs = [j for i,j in divmap]
 
             rhs = rprevtneg[dixs, mjxs]
-
-            # rhs = multmap[ixs,:]*rprev*divmap[:,jxs]
             print(rhs.dimensions(),RDF(rhs.density()))
             rels[djxs, mixs] = rhs
-        print("solving",rels.dimensions())
+        print("solving %s.. "%str(rels.dimensions()),end="",flush=True)
         rels.echelonize()
-        return -rels[:,len(monsin):].T.dense_matrix()
+        print('finished')
+        return -rels[:,len(monsin):].dense_matrix().T
 
     @cache 
     def mult_maps_noreduce(d): # d -> d+1
