@@ -144,19 +144,38 @@ def det_red(m,I,reduce=None):
         return p
     return minor(tuple(range(m.ncols())))
 
-def det_red_batch(ms,I,mult_map=None):
-    if mult_map is None:
-        mult_map = mult_maps(I)[0]
+def det_red_batch(ms,I,mmaps=None):
+    if mmaps is None:
+        mmaps = mult_maps(I)
+    _,reducemap,mult_maps_noreduce_stacked = mmaps
+
     n = ms[0].nrows()
     R = I.ring()
     F = R.base_ring()
     m = [[ matrix(F,[[m[i,j].monomial_coefficient(x) for x in R.gens()] for m in ms]).T 
         for j in range(n)] for i in range(n)]
 
+    @cache
+    def my_stacked(d):
+        intoout, intoin = mult_maps_noreduce_stacked(d)
+        last = intoout.ncols() // R.ngens()
+        intoout = [(i, j//last, j%last) for i,j in intoout.dict().keys()]
+        last = intoin.ncols() // R.ngens()
+        intoin = [(i, j//last, j%last) for i,j in intoin.dict().keys()]
+        return intoout,intoin
+
     def multiply(x,p,d):
         assert x.ncols() == p.ncols()
-        return mult_map(d) * matrix(F,[a.outer_product(b).list() 
-                for a,b in zip(x.columns(),p.columns())]).T
+        intoout, intoin = my_stacked(d)
+        res = matrix(F, reducemap(d+1).ncols(), x.ncols())
+        for i,j,k in intoin:
+            for l in range(x.ncols()):
+                res[i,l] += x[j,l]*p[k,l]
+        res = reducemap(d+1)*res
+        for i,j,k in intoout:
+            for l in range(x.ncols()):
+                res[i,l] += x[j,l]*p[k,l]
+        return res
         
     @cache
     def minor(cols):
@@ -272,20 +291,24 @@ def mult_maps(I):
             maps.append((intoout,intoin))
         return maps
     @cache
-    def mult_map(d):
-        print("mult_map",d)
-        mat = matrix(F,len(mons(d+1)[0]),R.ngens()*len(mons(d)[0]))
-        coloff = 0
-        for intoout,intoin in mult_maps_noreduce(d):
-            for i,j in sorted(intoin.dict().keys()):
-                mat[:,coloff+j] = reducemap(d+1)[:,i]
-            for i,j in intoout.dict().keys():
-                mat[i,coloff+j] += 1 
-            coloff += len(mons(d)[0])
-        return mat
-        # return block_matrix([[reducemap(d+1)*intoin + intoout 
-        #             for intoout,intoin in mult_maps_noreduce(d)]])
-    return mult_map,mult_maps_noreduce,reducemap,mons
+    def mult_maps_noreduce_stacked(d):
+        return (block_matrix([[a for a,_ in mult_maps_noreduce(d)]]),
+                block_matrix([[b for _,b in mult_maps_noreduce(d)]]))
+    return mons,reducemap,mult_maps_noreduce_stacked
+
+def mm(d):
+    print("mult_map",d)
+    mat = matrix(F,len(mons(d+1)[0]),16*len(mons(d)[0]))
+    coloff = 0
+    for mi,(intoout,intoin) in enumerate(mult_maps_noreduce(d)):
+        print(mi)
+        for ei,(i,j) in enumerate(sorted(intoin.dict().keys())):
+            # print(ei,i)
+            mat[:,coloff+j] = reducemap(d+1)[:,i]
+        for i,j in intoout.dict().keys():
+            mat[i,coloff+j] += 1 
+        coloff += len(mons(d)[0])
+    return mat
 
 
 def upper_tri_assume_all_generic(m,I):
@@ -356,7 +379,8 @@ jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()
 jact = simplify_polynomial_matrix(jact)
 
 my_reduce = reduce_fn_memo(I)
-mult_map,mult_maps_reduce,mult_maps_noreduce,reducemap,mons = mult_maps(I)
+mmaps = mult_maps(I)
+mons,reducemap,mult_maps_noreduce_stacked = mmaps
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
