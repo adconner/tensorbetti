@@ -225,22 +225,31 @@ def mult_maps(I):
                                 matrix(F,len(monsin),len(monsout),sparse=True)]])
         for i in range(len(monsin)):
             rels[i,i] = 1
-        rprev = reducemap(d-1)
+        rprevtneg = -reducemap(d-1).T
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             if len(divmap.dict()) == 0:
                 continue
             print(yi,end=" ",flush=True)
-            multmap = block_matrix([[-intoin],[intoout]])
-            ixs = [i for i,j in multmap.dict().keys()]
-            ixs.sort()
-            jxs = [j for i,j in divmap.dict().keys()]
-            jxs.sort()
-            rhs = multmap[ixs,:]*rprev*divmap[:,jxs]
+            multmap = block_matrix([[intoin],[intoout]])
+            multmap = list(multmap.dict().keys())
+            multmap.sort(key = lambda p: p[0])
+            divmap = list(divmap.dict().keys())
+            divmap.sort(key = lambda p: p[1])
+
+            mixs = [i for i,j in multmap]
+            mjxs = [j for i,j in multmap]
+
+            dixs = [i for i,j in divmap]
+            djxs = [j for i,j in divmap]
+
+            rhs = rprevtneg[dixs, mjxs]
+
+            # rhs = multmap[ixs,:]*rprev*divmap[:,jxs]
             print(rhs.dimensions(),RDF(rhs.density()))
-            rels[jxs, ixs] = rhs.T
+            rels[djxs, mixs] = rhs
         print("solving",rels.dimensions())
         rels.echelonize()
-        return rels[:,len(monsin):].T.dense_matrix()
+        return -rels[:,len(monsin):].T.dense_matrix()
 
     @cache 
     def mult_maps_noreduce(d): # d -> d+1
