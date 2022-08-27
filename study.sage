@@ -272,13 +272,20 @@ def mult_maps(I):
             maps.append((intoout,intoin))
         return maps
     @cache
-    def mult_maps_reduce(d): # d -> d+1
-        print('mult_maps_reduce',d)
-        return [reducemap(d+1)*intoin + intoout for intoout,intoin in mult_maps_noreduce(d)]
-    @cache
     def mult_map(d):
-        return block_matrix([[m for m in mult_maps_reduce(d)]])
-    return mult_map,mult_maps_reduce,mult_maps_noreduce,reducemap,mons
+        print("mult_map",d)
+        mat = matrix(F,len(mons(d+1)[0]),R.ngens()*len(mons(d)[0]))
+        coloff = 0
+        for intoout,intoin in mult_maps_noreduce(d):
+            for i,j in sorted(intoin.dict().keys()):
+                mat[:,coloff+j] = reducemap(d+1)[:,i]
+            for i,j in intoout.dict().keys():
+                mat[i,coloff+j] += 1 
+            coloff += len(mons(d)[0])
+        return mat
+        # return block_matrix([[reducemap(d+1)*intoin + intoout 
+        #             for intoout,intoin in mult_maps_noreduce(d)]])
+    return mult_map,mult_maps_noreduce,reducemap,mons
 
 
 def upper_tri_assume_all_generic(m,I):
