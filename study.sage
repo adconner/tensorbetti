@@ -221,34 +221,28 @@ def mult_maps(I):
                     cur[(mli,monsix(d)[1][n])] = 1
             divmaps[yi] = matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur)
 
-        rels = block_matrix([[identity_matrix(F,len(monsin),sparse=True),
-                                matrix(F,len(monsin),len(monsout),sparse=True)]])
-        for i in range(len(monsin)):
-            rels[i,i] = 1
-        rprevtneg = -reducemap(d-1).T
+        mapiot = matrix(F,len(monsin),len(monsout))
+        mapiit = matrix(F,len(monsin),len(monsin),sparse=True)
+        rprevt = reducemap(d-1).T
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             if len(divmap.dict()) == 0:
                 continue
             print(yi,end=" ",flush=True)
-            multmap = block_matrix([[intoin],[intoout]])
-            multmap = list(multmap.dict().keys())
-            multmap.sort(key = lambda p: p[0])
-            divmap = list(divmap.dict().keys())
-            divmap.sort(key = lambda p: p[1])
+            intoin = sorted(intoin.dict().keys())
+            intoout = sorted(intoout.dict().keys())
+            divmap = sorted(divmap.dict().keys())
 
-            mixs = [i for i,j in multmap]
-            mjxs = [j for i,j in multmap]
-
-            dixs = [i for i,j in divmap]
-            djxs = [j for i,j in divmap]
-
-            rhs = rprevtneg[dixs, mjxs]
-            print(rhs.dimensions(),RDF(rhs.density()))
-            rels[djxs, mixs] = rhs
-        print("solving %s.. "%str(rels.dimensions()),end="",flush=True)
-        rels.echelonize()
+            mapiit[[j for _,j in divmap],[i for i,_ in intoin]] = rprevt[[i for i,_ in divmap],[j for _,j in intoin]]
+            mapiot[[j for _,j in divmap],[i for i,_ in intoout]] = rprevt[[i for i,_ in divmap],[j for _,j in intoout]]
+        print("solving %d %d.. "% (len(monsin),len(monsout)),end="",flush=True)
+        for i,r in enumerate(mapiit.rows()):
+            for i2,e in r.dict().items():
+                mapiot.add_multiple_of_row(i,i2,e)
+        # for i,r in enumerate(mapiit.T.rows()):
+        #     for i2,e in r.dict().items():
+        #         mapiot.add_multiple_of_row(i2,i,e)
         print('finished')
-        return -rels[:,len(monsin):].dense_matrix().T
+        return mapiot.T
 
     @cache 
     def mult_maps_noreduce(d): # d -> d+1
