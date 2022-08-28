@@ -1,5 +1,7 @@
 from itertools import *
 from functools import cache
+import numpy as np
+import scipy.sparse as sp
 from IPython import embed
 
 load_attach_mode(load_debug=True)
@@ -152,41 +154,47 @@ def det_red_batch(ms,I,mmaps=None):
     n = ms[0].nrows()
     R = I.ring()
     F = R.base_ring()
-    m = [[ matrix(F,[[m[i,j].monomial_coefficient(x) for x in R.gens()] for m in ms]).T 
-        for j in range(n)] for i in range(n)]
+    char = int(F.characteristic())
+    m = np.array([[ [[int(m[i,j].monomial_coefficient(x)) 
+                     for m in ms] for x in R.gens()] for j in range(n)] for i in range(n)],
+                 dtype=np.int16)
 
     @cache
     def my_stacked(d):
         intoout, intoin = mult_maps_noreduce_stacked(d)
-        last = intoout.ncols() // R.ngens()
-        intoout = [(i, j//last, j%last) for i,j in intoout.dict().keys()]
-        last = intoin.ncols() // R.ngens()
-        intoin = [(i, j//last, j%last) for i,j in intoin.dict().keys()]
+        dat = list(intoin.dict().keys())
+        I = np.array([i for i,_ in dat])
+        J = np.array([j for _,j in dat])
+        E = np.ones(len(dat),dtype=np.int64)
+        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.int64)
+        intoin = intoin.tocsr()
+
+        dat = list(intoout.dict().keys())
+        I = np.array([i for i,_ in dat])
+        J = np.array([j for _,j in dat])
+        E = np.ones(len(dat),dtype=np.int64)
+        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.int64)
+        intoout = intoout.tocsr()
+
         return intoout,intoin
 
     def multiply(x,p,d):
-        assert x.ncols() == p.ncols()
         intoout, intoin = my_stacked(d)
-        res = matrix(F, reducemap(d+1).ncols(), x.ncols())
-        for i,j,k in intoin:
-            for l in range(x.ncols()):
-                res[i,l] += x[j,l]*p[k,l]
-        res = reducemap(d+1)*res
-        for i,j,k in intoout:
-            for l in range(x.ncols()):
-                res[i,l] += x[j,l]*p[k,l]
-        return res
+        rmap = reducemap(d+1)
+        prod = (x.astype(np.int64).reshape(x.shape[0],1,x.shape[1]) *\
+                  p.reshape(1,p.shape[0],p.shape[1])).reshape(-1,p.shape[1])
+        return ((np.matmul(rmap,((intoin*prod) % char)) + intoout*prod) % char).astype(np.int16)
         
     @cache
     def minor(cols):
         print ('minor',cols)
         if len(cols) == 0:
-            return matrix(F,1,len(ms),[R.one()]*len(ms))
+            return np.ones((1,len(ms)),dtype=np.int16)
         i = n - len(cols)
-        p = sum([(-1)**ji * multiply(m[i][j],minor(cols[:ji]+cols[ji+1:]),len(cols)-1) for ji,j in enumerate(cols) if not m[i][j].is_zero()])
-        print (cols,p.nrows())
+        p = sum([(-1)**ji * multiply(m[i,j],minor(cols[:ji]+cols[ji+1:]),len(cols)-1) for ji,j in enumerate(cols) if (m[i,j] != 0).any()])
+        print (cols,p.shape[0])
         return p
-    return minor(tuple(range(n)))
+    return matrix(F,minor(tuple(range(n))))
 
 def mult_maps(I):
     R = I.ring()
@@ -365,8 +373,12 @@ jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()
 jact = simplify_polynomial_matrix(jact)
 
 my_reduce = reduce_fn_memo(I)
-mmaps = mult_maps(I)
-mons,reducemap,mult_maps_noreduce_stacked = mmaps
+mons,rmap,mult_maps_noreduce_stacked = mult_maps(I)
+
+@cache
+def reducemap(d):
+    return np.array(rmap(d),dtype=np.int16)
+mmaps = (mons,reducemap,mult_maps_noreduce_stacked)
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
