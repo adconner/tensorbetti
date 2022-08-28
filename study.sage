@@ -166,10 +166,9 @@ def det_red_batch(ms,I,mmaps=None):
                   p.reshape(1,p.shape[0],p.shape[1])).reshape(-1,p.shape[1])
         prod %= char
         prod = prod.astype(np.double)
-        res = intoin*prod
-        res = np.matmul(rmap,res)
-        # res = np.matmul(rmap.astype(np.double),res.astype(np.double)).astype(np.int64)
-        res += intoout*prod
+        res = intoin @ prod
+        res = rmap @ res
+        res += intoout @ prod
         res = res.astype(np.int64)
         if (res > 2**53).any():
             raise ValueError("floating point precision loss")
@@ -193,6 +192,7 @@ def mult_maps(I):
     ltI = ideal([p.lt() for p in I.groebner_basis()])
     gbmaxd = max([p.degree() for p in I.groebner_basis()])
     xsix = {x:i for i,x in enumerate(R.gens())}
+    char = int(F.characteristic())
 
     @cache
     def mons(d):
@@ -223,7 +223,8 @@ def mult_maps(I):
             for m in monsin:
                 p = I.reduce(m)
                 mat.append([p.monomial_coefficient(n) for n in monsout])
-            return matrix(F,len(monsin),len(monsout),mat).T
+            # do this to get shape correct when len(monsin) == 0
+            return np.array(matrix(len(monsin),len(monsout),mat).T,dtype=np.int16)
 
         # each monomial, divide by y staying in ltI, reduce there, multiply by y, then reduce here (using only lower monomials)
 
@@ -239,34 +240,31 @@ def mult_maps(I):
                     cur[(mli,monsix(d)[1][n])] = 1
             divmaps[yi] = matrix(F,len(mons(d-1)[1]),len(mons(d)[1]),cur)
 
-        mapiot = matrix(F,len(monsin),len(monsout))
-        mapiit = matrix(F,len(monsin),len(monsin),sparse=True)
+        # mapiot = matrix(F,len(monsin),len(monsout))
+        # mapiit = matrix(F,len(monsin),len(monsin),sparse=True)
+        mapiot = np.zeros((len(monsin),len(monsout)),dtype=np.int32)
+        mapiit = sp.lil_array((len(monsin),len(monsin)),dtype=np.int16)
         rprevt = reducemap(d-1).T
         for yi,(divmap,(intoout,intoin)) in enumerate(zip(divmaps,mult_maps_noreduce(d-1))):
             if len(divmap.dict()) == 0:
                 continue
             print(yi,end=" ",flush=True)
-            intoin = sorted(intoin.dict().keys())
-            intoout = sorted(intoout.dict().keys())
-            divmap = sorted(divmap.dict().keys())
+            intoin = np.array(sorted(intoin.dict().keys())).T
+            intoout = np.array(sorted(intoout.dict().keys())).T
+            divmap = np.array(sorted(divmap.dict().keys())).T
 
-            mapiit[[j for _,j in divmap],[i for i,_ in intoin]] = rprevt[[i for i,_ in divmap],[j for _,j in intoin]]
-            mapiot[[j for _,j in divmap],[i for i,_ in intoout]] = rprevt[[i for i,_ in divmap],[j for _,j in intoout]]
-        nnz = len(mapiit.nonzero_positions())
-        print("solving %d %d %d.. "% (nnz, len(monsin),len(monsout)),end="",flush=True)
-        cnt = 0
-        every = nnz // 30
-        for i,r in enumerate(mapiit.rows()):
-            for i2,e in r.dict().items():
-                mapiot.add_multiple_of_row(i,i2,e)
-                cnt += 1
-                if cnt % every == 0:
-                    print(cnt,end=" ",flush=True)
-        # for i,r in enumerate(mapiit.T.rows()):
-        #     for i2,e in r.dict().items():
-        #         mapiot.add_multiple_of_row(i2,i,e)
+            if len(intoin) > 0:
+                mapiit[divmap[1].reshape(-1,1),intoin[0]] = rprevt[divmap[0].reshape(-1,1),intoin[1]]
+            mapiot[divmap[1].reshape(-1,1),intoout[0]] = rprevt[divmap[0].reshape(-1,1),intoout[1]]
+        print("solving %d %d %d.. "% (mapiit.nnz, len(monsin),len(monsout)),end="",flush=True)
+        mapiit = mapiit.tocsc()
+        for i,(a,b) in enumerate(zip(mapiit.indptr,mapiit.indptr[1:])):
+            J = mapiit.indices[a:b]
+            E = mapiit.data[a:b]
+            mapiot[J] += mapiot[i]*E.reshape(-1,1)
+            mapiot[J] %= char
         print('finished')
-        return mapiot.T
+        return mapiot.T.astype(np.int16)
 
     @cache 
     def mult_maps_noreduce(d): # d -> d+1
@@ -295,28 +293,24 @@ def mult_maps(I):
                 block_matrix([[b for _,b in mult_maps_noreduce(d)]]))
 
     @cache
-    def reducemap_numpy(d):
-        return np.array(reducemap(d),dtype=np.double)
-
-    @cache
     def mult_maps_noreduce_stacked_numpy(d):
         intoout, intoin = mult_maps_noreduce_stacked(d)
         dat = list(intoin.dict().keys())
         I = np.array([i for i,_ in dat])
         J = np.array([j for _,j in dat])
         E = np.ones(len(dat),dtype=np.double)
-        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.double)
+        intoin = sp.coo_array((E,(I,J)),shape=intoin.dimensions(),dtype=np.int8)
         intoin = intoin.tocsr()
 
         dat = list(intoout.dict().keys())
         I = np.array([i for i,_ in dat])
         J = np.array([j for _,j in dat])
         E = np.ones(len(dat),dtype=np.double)
-        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.double)
+        intoout = sp.coo_array((E,(I,J)),shape=intoout.dimensions(),dtype=np.int8)
         intoout = intoout.tocsr()
         return intoout,intoin
 
-    return mons,reducemap_numpy,mult_maps_noreduce_stacked_numpy
+    return mons,reducemap,mult_maps_noreduce_stacked_numpy
 
 
 def upper_tri_assume_all_generic(m,I):
@@ -366,29 +360,29 @@ def upper_tri_assume_all_generic_mult(m,I):
     return (I,m)
 
 
-# a = 4
-# n = 4
-# r = 7
+a = 4
+n = 4
+r = 7
 
-# # F = GF(5)
-# # F = GF(101)
-# # F = GF(1031)
-# F = GF(32003)
-# # F = GF(65537)
+# F = GF(5)
+# F = GF(101)
+# F = GF(1031)
+F = GF(32003)
+# F = GF(65537)
 
-# h = Tinv(random_tensor(F,n,r))
-# I = h.ideal_to(2)
-# jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
+h = Tinv(random_tensor(F,n,r))
+I = h.ideal_to(2)
+jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
 
-# x0 = h.samp()
-# jact = jac.T
-# jact = random_matrix(F,16,16)*jact
-# jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
-# jact = simplify_polynomial_matrix(jact)
+x0 = h.samp()
+jact = jac.T
+jact = random_matrix(F,16,16)*jact
+jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
+jact = simplify_polynomial_matrix(jact)
 
-# my_reduce = reduce_fn_memo(I)
-# mmaps = mult_maps(I)
-# mons,rmap,mm = mmaps
+my_reduce = reduce_fn_memo(I)
+mmaps = mult_maps(I)
+mons,reducemap,mult_map = mmaps
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
