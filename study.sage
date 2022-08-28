@@ -296,20 +296,6 @@ def mult_maps(I):
                 block_matrix([[b for _,b in mult_maps_noreduce(d)]]))
     return mons,reducemap,mult_maps_noreduce_stacked
 
-def mm(d):
-    print("mult_map",d)
-    mat = matrix(F,len(mons(d+1)[0]),16*len(mons(d)[0]))
-    coloff = 0
-    for mi,(intoout,intoin) in enumerate(mult_maps_noreduce(d)):
-        print(mi)
-        for ei,(i,j) in enumerate(sorted(intoin.dict().keys())):
-            # print(ei,i)
-            mat[:,coloff+j] = reducemap(d+1)[:,i]
-        for i,j in intoout.dict().keys():
-            mat[i,coloff+j] += 1 
-        coloff += len(mons(d)[0])
-    return mat
-
 
 def upper_tri_assume_all_generic(m,I):
     F = I.ring().base_ring()
