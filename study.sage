@@ -182,6 +182,7 @@ def det_red_batch(ms,I,mmaps=None):
             return np.ones((1,len(ms)),dtype=np.int16)
         i = n - len(cols)
         p = sum([(-1)**ji * multiply(m[i,j],minor(cols[:ji]+cols[ji+1:]),len(cols)-1) for ji,j in enumerate(cols) if (m[i,j] != 0).any()])
+        p %= char
         print (cols,p.shape[0])
         return p
     return matrix(F,minor(tuple(range(n))))
