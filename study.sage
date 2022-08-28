@@ -159,27 +159,8 @@ def det_red_batch(ms,I,mmaps=None):
                      for m in ms] for x in R.gens()] for j in range(n)] for i in range(n)],
                  dtype=np.int16)
 
-    @cache
-    def my_stacked(d):
-        intoout, intoin = mult_maps_noreduce_stacked(d)
-        dat = list(intoin.dict().keys())
-        I = np.array([i for i,_ in dat])
-        J = np.array([j for _,j in dat])
-        E = np.ones(len(dat),dtype=np.int64)
-        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.int64)
-        intoin = intoin.tocsr()
-
-        dat = list(intoout.dict().keys())
-        I = np.array([i for i,_ in dat])
-        J = np.array([j for _,j in dat])
-        E = np.ones(len(dat),dtype=np.int64)
-        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.int64)
-        intoout = intoout.tocsr()
-
-        return intoout,intoin
-
     def multiply(x,p,d):
-        intoout, intoin = my_stacked(d)
+        intoout, intoin = mult_maps_noreduce_stacked(d)
         rmap = reducemap(d+1)
         prod = (x.astype(np.int64).reshape(x.shape[0],1,x.shape[1]) *\
                   p.reshape(1,p.shape[0],p.shape[1])).reshape(-1,p.shape[1])
@@ -302,7 +283,30 @@ def mult_maps(I):
     def mult_maps_noreduce_stacked(d):
         return (block_matrix([[a for a,_ in mult_maps_noreduce(d)]]),
                 block_matrix([[b for _,b in mult_maps_noreduce(d)]]))
-    return mons,reducemap,mult_maps_noreduce_stacked
+
+    @cache
+    def reducemap_numpy(d):
+        return np.array(reducemap(d),dtype=np.int16)
+
+    @cache
+    def mult_maps_noreduce_stacked_numpy(d):
+        intoout, intoin = mult_maps_noreduce_stacked(d)
+        dat = list(intoin.dict().keys())
+        I = np.array([i for i,_ in dat])
+        J = np.array([j for _,j in dat])
+        E = np.ones(len(dat),dtype=np.int64)
+        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.int64)
+        intoin = intoin.tocsr()
+
+        dat = list(intoout.dict().keys())
+        I = np.array([i for i,_ in dat])
+        J = np.array([j for _,j in dat])
+        E = np.ones(len(dat),dtype=np.int64)
+        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.int64)
+        intoout = intoout.tocsr()
+        return intoout,intoin
+
+    return mons,reducemap_numpy,mult_maps_noreduce_stacked_numpy
 
 
 def upper_tri_assume_all_generic(m,I):
@@ -373,12 +377,8 @@ jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()
 jact = simplify_polynomial_matrix(jact)
 
 my_reduce = reduce_fn_memo(I)
-mons,rmap,mult_maps_noreduce_stacked = mult_maps(I)
-
-@cache
-def reducemap(d):
-    return np.array(rmap(d),dtype=np.int16)
-mmaps = (mons,reducemap,mult_maps_noreduce_stacked)
+mmaps = mult_maps(I)
+mons,rmap,mm = mmaps
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
