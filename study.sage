@@ -157,7 +157,7 @@ def det_red_batch(ms,I,mmaps=None):
     char = int(F.characteristic())
     m = np.array([[ [[int(m[i,j].monomial_coefficient(x)) 
                      for m in ms] for x in R.gens()] for j in range(n)] for i in range(n)],
-                 dtype=np.int16)
+                 dtype=np.int32)
 
     def multiply(x,p,d):
         intoout, intoin = mult_maps_noreduce_stacked(d)
@@ -173,13 +173,13 @@ def det_red_batch(ms,I,mmaps=None):
         if (res > 2**53).any():
             raise ValueError("floating point precision loss")
         res %= char
-        return res.astype(np.int16)
+        return res.astype(np.int32)
         
     @cache
     def minor(cols):
         print ('minor',cols)
         if len(cols) == 0:
-            return np.ones((1,len(ms)),dtype=np.int16)
+            return np.ones((1,len(ms)),dtype=np.int32)
         i = n - len(cols)
         p = sum([(-1)**ji * multiply(m[i,j],minor(cols[:ji]+cols[ji+1:]),len(cols)-1) for ji,j in enumerate(cols) if (m[i,j] != 0).any()])
         p %= char
