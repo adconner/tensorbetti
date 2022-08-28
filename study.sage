@@ -162,9 +162,19 @@ def det_red_batch(ms,I,mmaps=None):
     def multiply(x,p,d):
         intoout, intoin = mult_maps_noreduce_stacked(d)
         rmap = reducemap(d+1)
-        prod = (x.astype(np.int64).reshape(x.shape[0],1,x.shape[1]) *\
+        prod = (x.astype(np.int32).reshape(x.shape[0],1,x.shape[1]) *\
                   p.reshape(1,p.shape[0],p.shape[1])).reshape(-1,p.shape[1])
-        return ((np.matmul(rmap,((intoin*prod) % char)) + intoout*prod) % char).astype(np.int16)
+        prod %= char
+        prod = prod.astype(np.double)
+        res = intoin*prod
+        res = np.matmul(rmap,res)
+        # res = np.matmul(rmap.astype(np.double),res.astype(np.double)).astype(np.int64)
+        res += intoout*prod
+        res = res.astype(np.int64)
+        if (res > 2**53).any():
+            raise ValueError("floating point precision loss")
+        res %= char
+        return res.astype(np.int16)
         
     @cache
     def minor(cols):
@@ -286,7 +296,7 @@ def mult_maps(I):
 
     @cache
     def reducemap_numpy(d):
-        return np.array(reducemap(d),dtype=np.int16)
+        return np.array(reducemap(d),dtype=np.double)
 
     @cache
     def mult_maps_noreduce_stacked_numpy(d):
@@ -294,15 +304,15 @@ def mult_maps(I):
         dat = list(intoin.dict().keys())
         I = np.array([i for i,_ in dat])
         J = np.array([j for _,j in dat])
-        E = np.ones(len(dat),dtype=np.int64)
-        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.int64)
+        E = np.ones(len(dat),dtype=np.double)
+        intoin = sp.coo_matrix((E,(I,J)),shape=intoin.dimensions(),dtype=np.double)
         intoin = intoin.tocsr()
 
         dat = list(intoout.dict().keys())
         I = np.array([i for i,_ in dat])
         J = np.array([j for _,j in dat])
-        E = np.ones(len(dat),dtype=np.int64)
-        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.int64)
+        E = np.ones(len(dat),dtype=np.double)
+        intoout = sp.coo_matrix((E,(I,J)),shape=intoout.dimensions(),dtype=np.double)
         intoout = intoout.tocsr()
         return intoout,intoin
 
@@ -356,29 +366,29 @@ def upper_tri_assume_all_generic_mult(m,I):
     return (I,m)
 
 
-a = 4
-n = 4
-r = 7
+# a = 4
+# n = 4
+# r = 7
 
-# F = GF(5)
-# F = GF(101)
-# F = GF(1031)
-F = GF(32003)
-# F = GF(65537)
+# # F = GF(5)
+# # F = GF(101)
+# # F = GF(1031)
+# F = GF(32003)
+# # F = GF(65537)
 
-h = Tinv(random_tensor(F,n,r))
-I = h.ideal_to(2)
-jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
+# h = Tinv(random_tensor(F,n,r))
+# I = h.ideal_to(2)
+# jac = matrix([[p.derivative(x) for x in I.ring().gens()] for p in I.gens()[::-1]])
 
-x0 = h.samp()
-jact = jac.T
-jact = random_matrix(F,16,16)*jact
-jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
-jact = simplify_polynomial_matrix(jact)
+# x0 = h.samp()
+# jact = jac.T
+# jact = random_matrix(F,16,16)*jact
+# jact=jact.apply_map(lambda e: e(x0)).augment(identity_matrix(16)).echelon_form()[:,-16:]*jact
+# jact = simplify_polynomial_matrix(jact)
 
-my_reduce = reduce_fn_memo(I)
-mmaps = mult_maps(I)
-mons,rmap,mm = mmaps
+# my_reduce = reduce_fn_memo(I)
+# mmaps = mult_maps(I)
+# mons,rmap,mm = mmaps
 
 # dat = upper_tri_assume_all_generic(jacm,I)
 
