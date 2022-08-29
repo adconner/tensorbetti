@@ -14,6 +14,10 @@ def get_mat(ps):
     print (1)
     return matrix([[p.monomial_coefficient(m) for m in mons] for p in ps])
 
+def generic_minor_samp(M,minorsize):
+    F = M.base_ring().base_ring()
+    return random_matrix(F,minorsize,M.nrows())*M*random_matrix(F,M.ncols(),minorsize)
+
 def generic_sparse_minor_samp(M,minorsize):
     mons = sorted(set([m for p in M.list() for m in p.monomials()]),reverse=True)
     def to_vec(p):
