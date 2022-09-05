@@ -144,6 +144,10 @@ def random_tensor(F, n, r):
         [tuple(random_vector(F, n) for j in range(3)) for i in range(r)]
     )
 
+def random_tensor_gen(F, a, b, c, r):
+    return sum_rank_ones([(random_vector(F, a), random_vector(F,b), random_vector(F,c)) 
+            for i in range(r)])
+
 def dual_tensor(T):
     K = matrix([m.list() for m in T]).right_kernel_matrix()
     return [matrix(K.base_ring(),T[0].nrows(),T[0].ncols(),list(r)) for r in K] 
