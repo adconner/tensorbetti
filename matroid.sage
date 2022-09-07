@@ -76,17 +76,21 @@ def getAs(m,F=GF(32003),withrep=True):
         # dont need to check seen here
         yield normalize(A.augment(random_vector(F,3),subdivide=False))
         for js in combinations(range(m-1),2):
+            if A[:,js[0]] == A[:,js[1]]:
+                continue
             B = normalize(A.augment(A[:,js]*random_vector(F,2),subdivide=False))
             rels = relsf(B)
             if rels not in seen:
                 seen.add(rels)
                 yield B
         for js in combinations(range(m-1),2):
+            if A[:,js[0]] == A[:,js[1]]:
+                continue
             for ks in combinations( [j for j in range(js[0]+1,m-1) if j != js[1]],2 ):
+                if A[:,ks[0]] == A[:,ks[1]]:
+                    continue
                 K = block_matrix([ [A[:,js].T.right_kernel_matrix()],
                     [A[:,ks].T.right_kernel_matrix()] ]).right_kernel_matrix()
-                if K.nrows() == 0:
-                    continue
                 B = normalize(A.augment(K.row(0),subdivide=False))
                 if B.column(m-1) in B.columns()[:m-1]:
                     continue
@@ -99,12 +103,13 @@ def getAs_iso(m,F=GF(32003),withrep=True):
     As = list(getAs(m,F,withrep))
     def key(A):
         M = Matroid(A)
-        out = [tuple([e+1 for e in sorted(s)]) for s in M.dependent_r_sets(2)]
-        out.extend([tuple([e+1 for e in sorted(s)]) for s in M.dependent_r_sets(3)])
+        out = [tuple([e+1 for e in sorted(s)]) 
+            for s in chain(M.dependent_r_sets(2),M.dependent_r_sets(3))]
         return tuple(sorted(out))
     As = {key(A): A for A in As}
     os = gap.OrbitsDomain(gap.SymmetricGroup(m), list(As.keys()), gap.OnSetsSets)
-    return [As[tuple(map(tuple,o[1].sage()))] for o in os]
+    # return gap.Orbits(gap.SymmetricGroup(m), list(As.keys()), gap.OnSetsSets).sage(),As
+    return [As[tuple(map(tuple,o[0]))] for o in os.sage()]
 
 def normalize(A):
     A.echelonize()
@@ -120,10 +125,41 @@ def normalize(A):
         A[:,j] /= next(e for e in A[:,j].list() if e != 0)
     return A
 
-# def get_ABs(m):
-#     for A in getAs_norep_iso(m):
-#         normalize(A)
-#         for B in 
+def getABs(m,F=GF(32003)):
+    R = PolynomialRing(F,'x',9)
+    X = matrix(R,3,3,R.gens())
+    ms = ideal(X.adjugate().list())
+
+    def key(A):
+        M = Matroid(A)
+        out = [tuple([e+1 for e in sorted(s)]) 
+            for s in chain(M.dependent_r_sets(2),M.dependent_r_sets(3))]
+        return tuple(sorted(out))
+
+    out = []
+    As = { key(A) : A for A in getAs(m,F)}
+    Bs = { key(A) : A for A in getAs(m,F)}
+    for o in gap.OrbitsDomain(gap.SymmetricGroup(m),list(As.keys()),gap.OnSetsSets).sage():
+        Akey = o[0]
+        Astab = gap.Stabilizer(gap.SymmetricGroup(m),Akey,gap.OnSetsSets)
+        print(Astab.Size())
+        for o in gap.OrbitsDomain(Astab,list(As.keys()),gap.OnSetsSets).sage():
+            Bkey = o[0]
+
+            A = As[tuple(map(tuple,Akey))]
+            B = Bs[tuple(map(tuple,Bkey))]
+
+            ps = ABtops(A,B)
+            Tinv = ff.lift(ms,ideal(ps)).change_ring(F)
+            if Tinv.rank() < m:
+                continue
+            out.append((A,B))
+    # # gap.OrbitsDomain( list(res.keys())
+    # return res
+    return out
+
+
+
 
 F = GF(32003)
 A = random_matrix(F,3,6)
