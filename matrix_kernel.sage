@@ -100,7 +100,6 @@ def walk_ltIs(J):
     pkey = lambda p: (-p.degree(), p.lm()) # use with descending order
     q = [(None,R.ideal(),[],R.one(),J)]
     from heapq import heappush, heappop
-    checking = set()
     res = []
     hilbertseries = {}
     while len(q) > 0:
@@ -122,13 +121,11 @@ def walk_ltIs(J):
         if hn not in hilbertseries:
             hilbertseries[hn] = J
         print(len(hilbertseries),mprev,hn)
-        # print(len(hilbertseries),mprev,ss,tuple(I.gens()),hn)
+        # print(ss)
         for (_,m),cs in sorted(lmcs.items(),reverse=True):
             for I2 in (I + cs).minimal_associated_primes():
-                if I2 not in checking:
-                    checking.add(I2)
-                    if all(any(e not in I2 for e in s) for s in ss):
-                        heappush(q, (complexity(I2,m), I2, copy(ss), m, J))
+                if all(any(e not in I2 for e in s) for s in ss):
+                    heappush(q, (complexity(I2,m), I2, copy(ss), m, J))
             ss.append(cs)
 
     return res,hilbertseries
