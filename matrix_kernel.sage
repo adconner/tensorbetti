@@ -96,33 +96,37 @@ Jlt = ideal([p.lm() for p  in Jtarget.groebner_basis()])
 
 
 def walk_ltIs(J):
-    J = R.ideal(ff.groebner(J))
     complexity = lambda J,m: (m.degree(), max(p.degree() for p in J.gens()),sum(p.degree() for p in J.gens()))
+    J = R.ideal(ff.groebner(J))
     pkey = lambda p: (-p.degree(), p.lm()) # use with descending order
-    q = [(None,R.ideal(),[],R.one(),J)]
-    from heapq import heappush, heappop
+    q = [(R.ideal(),[],R.one(),J)]
 
+    # assumes ss not in I and ts not in I and I prime
     def walk_choices(I, ss, ts):
         if len(ts) == 0:
             yield (I,ss)
             return
         t = ts[0]
-        if t in [1,-1] or t in ss or t in I:
+        tf = [f for f,_ in t.factor() if f not in ss]
+        if len(tf) == 0:
             for Iout,ssout in walk_choices(I, ss, ts[1:]):
                 yield (Iout,ssout)
             return
-        for Iout,ssout in walk_choices(I, ss + [t], ts[1:]):
+        for Iout,ssout in walk_choices(I, ss + tf, ts[1:]):
             yield (Iout,ssout)
-        for I2 in (I + t).minimal_associated_primes():
-            for Iout,ssout in walk_choices(I2, ss, ts[1:]):
-                yield (Iout,ssout)
+        Is= (I + t).minimal_associated_primes()
+        # print(len(Is),end=" ",flush=True)
+        for I2 in Is:
+            if all(s not in I2 for s in ss):
+                for Iout,ssout in walk_choices(I2, ss, ts[1:]):
+                    yield (Iout,ssout)
         
     Jcache = {}
     hilbertseries = set()
     while len(q) > 0:
-        _, I, ss, mprev, J = heappop(q)
+        I, ss, mprev, J = q.pop()
         if I.groebner_basis() not in Jcache:
-            J = R.ideal(ff.std(J+I))
+            J = R.ideal(ff.groebner(J+I))
             lmcs = {}
             ltJ = []
             for p in J.gens():
@@ -133,18 +137,17 @@ def walk_ltIs(J):
             lmcs = sorted(lmcs.items(),key=lambda p: pkey(p[0]), reverse=True)
             ltJ = S.ideal(ltJ)
             hilbertseries.add(ltJ.hilbert_numerator())
-            print(len(hilbertseries),tuple(I.gens()))
+            print(tuple(I.gens()),len(hilbertseries))
             Jcache[I.groebner_basis()] = (J,lmcs,ltJ)
-        # else:
-        #     print("SAVING",tuple(I.gens()))
 
         J,lmcs,_ = Jcache[I.groebner_basis()]
         try:
             m, cs = next( (m,cs) for m,cs in lmcs if pkey(m) < pkey(mprev) )
         except StopIteration:
             continue
+        print (len(cs),end=" ",flush=True)
         for I2,ss2 in walk_choices(I,ss,cs):
-            heappush(q, (complexity(I2,m), I2, ss2, m, J))
+            q.append((I2, ss2, m, J))
 
     return Jcache,hilbertseries
 
