@@ -101,8 +101,6 @@ def walk_ltIs(J):
     pkey = lambda p: (-p.degree(), p.lm()) # use with descending order
     q = [(None,R.ideal(),[],R.one(),J)]
     from heapq import heappush, heappop
-    res = []
-    hilbertseries = {}
 
     def walk_choices(I, ss, ts):
         if len(ts) == 0:
@@ -119,36 +117,36 @@ def walk_ltIs(J):
             for Iout,ssout in walk_choices(I2, ss, ts[1:]):
                 yield (Iout,ssout)
         
+    Jcache = {}
+    hilbertseries = set()
     while len(q) > 0:
         _, I, ss, mprev, J = heappop(q)
-        print(tuple(I.gens()))
-        res.append(J)
-        lmcs = {}
-        ltJ = []
-        for p in J.gens():
-            m,c = lmc(p)
-            if m != 1:
-                ltJ.append(S.monomial(*m.exponents()[0][:S.ngens()]))
-            if pkey(m) < pkey(mprev):
-                lmcs.setdefault(pkey(m),[]).append(c)
-        ltJ = S.ideal(ltJ)
-        hn = ltJ.hilbert_numerator()
-        if hn not in hilbertseries:
-            hilbertseries[hn] = J
-        print(len(hilbertseries),mprev,hn)
-        print(ss)
+        if I.groebner_basis() not in Jcache:
+            J = R.ideal(ff.std(J+I))
+            lmcs = {}
+            ltJ = []
+            for p in J.gens():
+                m,c = lmc(p)
+                if m != 1:
+                    ltJ.append(S.monomial(*m.exponents()[0][:S.ngens()]))
+                lmcs.setdefault(m,[]).append(c)
+            lmcs = sorted(lmcs.items(),key=lambda p: pkey(p[0]), reverse=True)
+            ltJ = S.ideal(ltJ)
+            hilbertseries.add(ltJ.hilbert_numerator())
+            print(len(hilbertseries),tuple(I.gens()))
+            Jcache[I.groebner_basis()] = (J,lmcs,ltJ)
+        # else:
+        #     print("SAVING",tuple(I.gens()))
+
+        J,lmcs,_ = Jcache[I.groebner_basis()]
         try:
-            (_,m), cs = max(lmcs.items())
-        except ValueError:
+            m, cs = next( (m,cs) for m,cs in lmcs if pkey(m) < pkey(mprev) )
+        except StopIteration:
             continue
         for I2,ss2 in walk_choices(I,ss,cs):
-            if I2 != I:
-                J2 = R.ideal(ff.groebner(J+I2))
-            else:
-                J2 = J
-            heappush(q, (complexity(I2,m), I2, ss2, m, J2))
+            heappush(q, (complexity(I2,m), I2, ss2, m, J))
 
-    return res,hilbertseries
+    return Jcache,hilbertseries
 
 def walk_ltIs2(J):
     complexity = lambda J: (max(p.degree() for p in J.gens()),sum(p.degree() for p in J.gens()))
