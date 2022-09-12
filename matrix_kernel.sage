@@ -96,11 +96,12 @@ Jlt = ideal([p.lm() for p  in Jtarget.groebner_basis()])
 
 
 def walk_ltIs(J):
+    J = R.ideal(ff.groebner(J))
     complexity = lambda J,m: (m.degree(), max(p.degree() for p in J.gens()),sum(p.degree() for p in J.gens()))
     from heapq import heappop, heappush
     pkey = lambda p: (-p.degree(), p.lm()) # use with descending order
-    q = [(None,R.ideal(),[],R.one(),J)]
 
+    q = [(None,R.ideal(),[],R.one(),J)]
     # assumes ss not in I and ts not in I and I prime
     def walk_choices(I, ss, ts):
         if len(ts) == 0:
@@ -127,7 +128,7 @@ def walk_ltIs(J):
         _, I, ss, mprev, J = heappop(q)
         if I.groebner_basis() not in Jcache:
             print(tuple(I.groebner_basis()),mprev,end=" ",flush=True)
-            J = R.ideal(ff.groebner(J+I))
+            J = R.ideal(ff.std(J,I))
             lmcs = {}
             ltJ = []
             for p in J.gens():
