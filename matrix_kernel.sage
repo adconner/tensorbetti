@@ -21,8 +21,8 @@ ts = R.gens()[9:]
 # ts = S.gens()
 # R = PolynomialRing(S,'x',9)
 # xs = R.gens()
-qs = matrix(R,3,3,xs).adjugate().list()
-qs.sort(reverse=True)
+qs = matrix(R,3,3,xs)[::-1,::-1].T.adjugate().list()
+
 
 TM = matrix(R,6,9)
 TM[:,:6] = identity_matrix(R,6)
@@ -39,12 +39,31 @@ TM[0,6] = 1
 TM[3,6] = 1
 TM[0,-1] = 0
 
+TMkeep = copy(TM)
+
+TMg = copy(TM)
+TMg[0,7] = 0
+TMg[1,8] = 0
+
+TM1 = copy(TMg)
+TM1[4,6] = 1
+TM1[5,6] = 1
+TMs = [copy(TM1)]
+TM1[4,6] = 0
+TMs.append(copy(TM1))
+TM1[5,6] = 0
+TMs.append(copy(TM1))
+TM1[4,6] = 1
+TMs.append(copy(TM1))
+
+## MORE needed 
+
 # to test, should get basic one
 for i in range(3):
     for j in range(3):
         if i != j:
-            TM[i,6+j] = 0
-            TM[3+i,6+j] = 0
+            TMkeep[i,6+j] = 0
+            TMkeep[3+i,6+j] = 0
 
 # TM[:3,6:] = diagonal_matrix((0,)+ts[:2])
 
@@ -57,6 +76,8 @@ for i in range(3):
 # TM[4:,6:] = matrix(R,2,3,ts[3:]+(0,))
 # TM[3,6] = ts[2]
 
+# TM = TMkeep
+TM = TMs[2]
 ps = [sum(a*b for a,b in zip(qs,r)) for r in TM]
 
 
