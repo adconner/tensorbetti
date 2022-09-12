@@ -97,9 +97,9 @@ Jlt = ideal([p.lm() for p  in Jtarget.groebner_basis()])
 
 def walk_ltIs(J):
     complexity = lambda J,m: (m.degree(), max(p.degree() for p in J.gens()),sum(p.degree() for p in J.gens()))
-    J = R.ideal(ff.groebner(J))
+    from heapq import heappop, heappush
     pkey = lambda p: (-p.degree(), p.lm()) # use with descending order
-    q = [(R.ideal(),[],R.one(),J)]
+    q = [(None,R.ideal(),[],R.one(),J)]
 
     # assumes ss not in I and ts not in I and I prime
     def walk_choices(I, ss, ts):
@@ -124,8 +124,9 @@ def walk_ltIs(J):
     Jcache = {}
     hilbertseries = set()
     while len(q) > 0:
-        I, ss, mprev, J = q.pop()
+        _, I, ss, mprev, J = heappop(q)
         if I.groebner_basis() not in Jcache:
+            print(tuple(I.groebner_basis()),mprev,end=" ",flush=True)
             J = R.ideal(ff.groebner(J+I))
             lmcs = {}
             ltJ = []
@@ -137,7 +138,7 @@ def walk_ltIs(J):
             lmcs = sorted(lmcs.items(),key=lambda p: pkey(p[0]), reverse=True)
             ltJ = S.ideal(ltJ)
             hilbertseries.add(ltJ.hilbert_numerator())
-            print(tuple(I.gens()),len(hilbertseries))
+            print(len(hilbertseries))
             Jcache[I.groebner_basis()] = (J,lmcs,ltJ)
 
         J,lmcs,_ = Jcache[I.groebner_basis()]
@@ -147,7 +148,7 @@ def walk_ltIs(J):
             continue
         print (len(cs),end=" ",flush=True)
         for I2,ss2 in walk_choices(I,ss,cs):
-            q.append((I2, ss2, m, J))
+            heappush(q,(complexity(I2,m), I2, ss2, m, J))
 
     return Jcache,hilbertseries
 
