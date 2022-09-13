@@ -116,7 +116,9 @@ Jlt = ideal([p.lm() for p  in Jtarget.groebner_basis()])
 
 
 
-def walk_ltIs(J):
+def walk_ltIs(J,degbound=None):
+    if degbound is not None:
+        J = J + [prod(m) for m in combinations_with_replacement(xs,degbound+1)]
     J = R.ideal(ff.groebner(J))
     complexity = lambda J,m: (m.degree(), max(p.degree() for p in J.gens()),sum(p.degree() for p in J.gens()))
     from heapq import heappop, heappush
@@ -166,6 +168,8 @@ def walk_ltIs(J):
         J,lmcs,_ = Jcache[I.groebner_basis()]
         try:
             m, cs = next( (m,cs) for m,cs in lmcs if pkey(m) < pkey(mprev) )
+            if degbound is not None and m.degree() > degbound:
+                continue
         except StopIteration:
             continue
         print (len(cs),end=" ",flush=True)
