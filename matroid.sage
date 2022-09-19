@@ -44,11 +44,14 @@ def Ttops(T):
     ps = [sum(a*b for a,b in zip(X.adjugate().list(),r)) for r in Tinv]
     return ps
 
-def sat(ps):
+def sat(ps,minors=False):
     R = ps[0].parent()
     n = sqrt(R.ngens())
     X = matrix(R,n,n,R.gens())
-    return ideal(ps).saturation(ideal(X.adjugate().list()))[0]
+    if not minors:
+        return ideal(ps).saturation(X.det())[0]
+    else:
+        return ideal(ps).saturation(ideal(X.adjugate().list()))[0]
 
 def unsat(I):
     R = I.ring()
