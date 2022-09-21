@@ -20,6 +20,27 @@ from itertools import *
 from functools import cache
 from sage.libs.singular.function_factory import ff
 
+def is_concise(T):
+    F = T[0].base_ring()
+    import numpy as np
+    T = np.array(T)
+    for i in range(3):
+        flat = matrix(F,T.reshape(T.shape[0],-1))
+        if flat.rank() != flat.nrows():
+            return False
+        T = T.transpose((1,2,0))
+    return True
+
+def flattening_ranks(T):
+    F = T[0].base_ring()
+    import numpy as np
+    T = np.array(T)
+    rs = []
+    for i in range(3):
+        rs.append(matrix(F,T.reshape(T.shape[0],-1)).rank())
+        T = T.transpose((1,2,0))
+    return rs
+
 def ABtops(A,B):
     n = A.nrows()
     F = A.base_ring()
