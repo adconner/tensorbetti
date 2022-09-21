@@ -53,6 +53,19 @@ def sat(ps,minors=False):
     else:
         return ideal(ps).saturation(ideal(X.adjugate().list()))[0]
 
+def quotient_by_det(T):
+    n = T[0].nrows()
+    R = PolynomialRing(T[0].base_ring(),'x',n**2)
+    X = matrix(R,n,n,R.gens())
+    ps = X.adjugate().list()
+    M2 = matrix(ff.syz(ideal(ps))).T
+    T = matrix([m.list() for m in T])
+    x = vector([R.gen(i*n) for i in range(n) ] + [0]*(n**2-n))
+    K = (T*x.column()).augment(-T*M2)
+    ss = ff.syz(K)
+    return ideal([r[0] for r in ss])
+
+
 def unsat(I):
     R = I.ring()
     n = sqrt(R.ngens())
