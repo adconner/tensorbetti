@@ -196,10 +196,8 @@ def getABs(m,F=GF(32003)):
     return out
 
 
-
-
-F = GF(32003)
-A = random_matrix(F,3,6)
-B = random_matrix(F,3,6)
+# F = GF(32003)
+# A = random_matrix(F,3,6)
+# B = random_matrix(F,3,6)
 
 # vim: ft=python

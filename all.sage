@@ -8,5 +8,6 @@ from sage.libs.singular.function_factory import ff
 
 attach('ParameterizedVariety.sage')
 attach('minors_mod_ideal.sage')
+attach('matroid.sage')
 
 # vim: ft=python
