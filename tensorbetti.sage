@@ -3,7 +3,10 @@ from sage.libs.singular.option import opt, opt_ctx
 import sage.libs.singular.function_factory
 from sys import stdout
 
-sing = sage.libs.singular.function_factory.ff
+load('ParameterizedVariety.sage')
+
+from sage.libs.singular.function_factory import ff
+sing = ff
 std = sing.std
 syz = sing.syz
 res = sing.res
@@ -11,9 +14,71 @@ betti = sing.betti
 
 # see libSingular: Options sagemath
 
+# 4 6 11
+# [  1   0   0]
+# [  0   0   0]
+# [  0  66 180]
+# [  0   0 705]
+# [  0   0 224]
+# [  0   0  64]
+
+# 4 6 13
+# [   1    0    0]
+# [   0    7    0]
+# [   0  144 1153]
+# [   0    0  678]
+# [   0    0  406]
+
+# 4 6 15
+# [  1   0   0]
+# [  0  36  80]
+# [  0   0 893]
+# [  0   0 565]
+# [  0   0  78]
+
+# 4 6 16
+# [  1   0   0]
+# [  0  52 236]
+# [  0   0 778]
+# [  0   0 313]
+# [  0   0  45]
+
+# 4 6 noproj
+# [  1   0   0]
+# [  0  52 236]
+# [  0   0 801]
+# [  0   0 147]
+# [  0   0   2]
+
+# [1 0 0 0]
+# [0 3 0 0]
+# [0 0 3 0]
+# [0 0 0 1]
+
+
+# [ 1  0  0  0  0]
+# [ 0  0  0  0  0]
+# [ 0  4  0  0  0]
+# [ 0  1  0  0  0]
+# [ 0  0  6  0  0]
+# [ 0  0 16 30 12]
+
+# n=4; h=Tinv(dual_tensor([matrix(GF(32003),n,n,{(i,i):1}) for i in range(n)]+[matrix(GF(32003),
+# n,n,lambda i,j: 1)])); I=h.ideal_to(4); betti(res(I,0))
+# [  1   0   0   0   0   0   0   0   0]
+# [  0   0   0   0   0   0   0   0   0]
+# [  0   5   0   0   0   0   0   0   0]
+# [  0   5   0   0   0   0   0   0   0]
+# [  0   0  26   0   0   0   0   0   0]
+# [  0   0  50 134  70   0   0   0   0]
+# [  0   0   0 100 288 316 160  36   0]
+# [  0   0   0   0   0   0   0   0   1]
+
+
 def main():
-    n = 4
-    r = 4
+    a = 3
+    n = 3
+    r = 7
     dim = 16
 
     # F = GF(5)
@@ -25,80 +90,29 @@ def main():
     # opt['prot'] = True
 
     # return dual_tensor(random_tensor(F,n,r))
-    # return Tinv(random_tensor(F,n,r))
+    return Tinv(random_tensor(F,n,r))
     # return Tinv(dual_tensor(random_tensor(F,n,r)))
 
-    F4 = Fn_poly(F,n**2,4)
-    return gauss_map(random_tensor(F,n,r),F4)
+    # F4 = Fn_poly(F,n**2,4)
+    # return gauss_map(random_tensor(F,n,r),F4)
 
     # return generic_project(Tinv(dual_tensor(random_tensor(F,n,r))),dim)
 
+    # for n in range(2,6):
+    #     for a in range(max(n**2-3,1),n**2+1):
+    #         print ("tensor size %d %d %d" % (a,n,n))
+    #         I = Tinv(random_tensor_gen(F,a,n,n,100)).ideal_to(4)
+    #         # print ('finding betti table')
+    #         print (betti(res(I,0)))
+
+    # I = Tinv(random_tensor_gen(F,n**2-a,n,n,100)).ideal_to(4)
+    # print (betti(res(I,0)))
+
     # for r in range(4,10):
     #     print (n,r)
-    #     I = Tinv(dual_tensor(random_tensor(F,n,r))).ideal_to(4)
-    #     print (betti(syz(I)))
+    #     I = Tinv(dual_tensor(random_tensor_gen(F,a,n,n,r))).ideal_to(4)
+    #     print (betti(res(I,0)))
 
-
-def memoize(obj):
-    cache = obj.cache = {}
-
-    import functools
-
-    @functools.wraps(obj)
-    def memoizer(*args, **kwargs):
-        if args not in cache:
-            cache[args] = obj(*args, **kwargs)
-        return cache[args]
-
-    return memoizer
-
-class ParameterizedVariety:
-    def __init__(self, samp):
-        self.samp = samp
-        v = samp()
-        self.n = len(v)
-        self.F = v[0].parent()
-        self.R = PolynomialRing(self.F,'x',self.n)
-
-    def sampm(self, mis):
-        s = self.samp()
-        return [prod(s[i] for i in mi) for mi in mis]
-
-    @memoize
-    def ideal_to(self, d):
-        if d < 0:
-            return self.R.ideal()
-        Ilower = self.ideal_to(d - 1)
-        print("getting component of ideal in degree %d" % d)
-        ltI = ideal([p.lm() for p in Ilower.groebner_basis(deg_bound=d)])
-        ms = [
-            (mi, m)
-            for mi in combinations_with_replacement(range(self.R.ngens()), d)
-            for m in [prod(self.R.gen(i) for i in mi)]
-            if m not in ltI
-        ]
-        print("%d monomials undetermined, " % len(ms),end="")
-        stdout.flush()
-        mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
-        eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
-        pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
-        print ("%d relations found" % len(pscur))
-        gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
-        return self.R.ideal(gbto)
-
-    @memoize
-    def Id_mod_lower_basis(self, d):
-        I = self.ideal_to(d - 1)
-        ltlower = ideal([p.lm() for p in I.groebner_basis(deg_bound=d)])
-        return [p for p in self.ideal_to(d).gens() if p.lm() not in ltlower]
-
-    def write_to(self, deg, pre="examples/"):
-        # open("%sT.txt" % pre, "w").write(str([map(list, m) for m in self.T]) + "\n")
-        for d in range(deg + 1):
-            ps = self.Id_mod_lower_basis(d)
-            if len(ps) == 0:
-                continue
-            open("%sI%d.txt" % (pre, d), "w").write(",\n".join(map(str, ps)) + "\n")
 
 # Given a tensor, returns the parameterized variety Tinv
 def Tinv(T):
