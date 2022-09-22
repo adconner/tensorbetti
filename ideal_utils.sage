@@ -1,3 +1,6 @@
+def symbolic_matrix(n,F=GF(32003)):
+    S = PolynomialRing(F,'x',n**2)
+    return matrix(S,n,n,S.gens())
 
 def is_concise(T):
     F = T[0].base_ring()
@@ -46,6 +49,13 @@ def sat(ps,minors=False):
     else:
         return ideal(ps).saturation(ideal(X.adjugate().list()))[0]
 
+def unsat(I):
+    R = I.ring()
+    n = sqrt(R.ngens())
+    X = matrix(R,n,n,R.gens())
+    ps = [p for p in I.intersection(ideal(X.adjugate().list())).gens() if p.degree() == n-1]
+    return ps
+
 def quotient_by_det(T):
     n = T[0].nrows()
     R = PolynomialRing(T[0].base_ring(),'x',n**2)
@@ -58,12 +68,5 @@ def quotient_by_det(T):
     ss = ff.syz(K)
     return ideal([r[0] for r in ss])
 
-
-def unsat(I):
-    R = I.ring()
-    n = sqrt(R.ngens())
-    X = matrix(R,n,n,R.gens())
-    ps = [p for p in I.intersection(ideal(X.adjugate().list())).gens() if p.degree() == n-1]
-    return ps
 
 # vim: ft=python

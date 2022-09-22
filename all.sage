@@ -10,6 +10,6 @@ attach('ParameterizedVariety.sage')
 attach('minors_mod_ideal.sage')
 attach('matroid.sage')
 attach('tensorbetti.sage')
-attach('ideal_util.sage')
+attach('ideal_utils.sage')
 
 # vim: ft=python
