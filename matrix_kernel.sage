@@ -6,7 +6,7 @@ from sage.libs.singular.function_factory import ff
 from sage.libs.singular.option import opt,opt_ctx
 load_attach_mode(load_debug=True)
 
-# opt['prot'] = True
+opt['prot'] = True
 # opt['deg_bound'] = 3
 
 F = GF(32003)
@@ -77,7 +77,7 @@ for i in range(3):
 # TM[3,6] = ts[2]
 
 # TM = TMkeep
-TM = TMs[2]
+TM = TMs[0]
 ps = [sum(a*b for a,b in zip(qs,r)) for r in TM]
 
 
@@ -152,6 +152,7 @@ def walk_ltIs(J,degbound=None):
         if I.groebner_basis() not in Jcache:
             print(tuple(I.groebner_basis()),mprev,end=" ",flush=True)
             J = R.ideal(ff.std(J,I))
+            # J = R.ideal(ff.groebner(J+I))
             lmcs = {}
             ltJ = []
             for p in J.gens():
