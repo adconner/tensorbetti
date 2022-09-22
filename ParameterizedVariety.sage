@@ -14,7 +14,7 @@ class ParameterizedVariety:
 
     @cache
     def ideal_to(self, d):
-        if d < 0:
+        if d <= 0:
             return self.R.ideal()
         Ilower = self.ideal_to(d - 1)
         print("getting component of ideal in degree %d" % d)
@@ -25,11 +25,33 @@ class ParameterizedVariety:
             for m in [prod(self.R.gen(i) for i in mi)]
             if m not in ltI
         ]
-        print("%d monomials undetermined, " % len(ms),end="")
-        stdout.flush()
+        print("%d monomials undetermined, " % len(ms),end="",flush=True)
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
         eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
         pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
+        print ("%d relations found" % len(pscur))
+        gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
+        return self.R.ideal(gbto)
+    
+    @cache
+    def ideal_to_intersect(self, d, J):
+        if d <= 0:
+            return self.R.ideal()
+        Ilower = self.ideal_to_intersect(d - 1, J)
+        print("getting component of ideal in degree %d" % d)
+        ltI = ideal([p.lm() for p in Ilower.groebner_basis(deg_bound=d)])
+        ps = [
+            m - mr
+            for mi in combinations_with_replacement(range(self.R.ngens()), d)
+            for m in [prod(self.R.gen(i) for i in mi)]
+            if m not in ltI 
+            for mr in [J.reduce(m)]
+            if mr != m
+        ]
+        print("%d monomials undetermined, " % len(ps),end="",flush=True)
+        eqs = matrix(self.F, [[p(s) for p in ps] for i in range(len(ps)) 
+                         for s in [self.samp()]])
+        pscur = [sum(a*p for a,p in zip(r,ps)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
         gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
         return self.R.ideal(gbto)
