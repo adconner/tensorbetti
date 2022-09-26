@@ -39,9 +39,9 @@ class ParameterizedVariety:
             return self.R.ideal()
         Ilower = self.ideal_to_intersect(d - 1, J)
         print("getting component of ideal in degree %d" % d)
-        ltI = ideal([p.lm() for p in Ilower.groebner_basis(deg_bound=d)])
-        ltJ = [p.lm().exponents()[0] for p in J.groebner_basis()]
-        ltJd = [J.ring().monomial(*m) for m in monomial_ideal_component(ltJ, d)]
+        ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.groebner_basis(deg_bound=d) if not p.is_zero()]
+        ltJ = [tuple(p.lm().exponents()[0]) for p in J.groebner_basis() if not p.is_zero()]
+        ltJd = [self.R.monomial(*m) for m in monomial_ideal_component(ltJ, d, ltI)]
         ps = [m - J.reduce(m) for m in ltJd]
         print("%d monomials undetermined, " % len(ps),end="",flush=True)
         eqs = matrix(self.F, [[p(s) for p in ps] for i in range(len(ps)) 
