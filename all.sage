@@ -11,5 +11,6 @@ attach('minors_mod_ideal.sage')
 attach('matroid.sage')
 attach('tensorbetti.sage')
 attach('ideal_utils.sage')
+attach('monomial_ideal.py')
 
 # vim: ft=python
