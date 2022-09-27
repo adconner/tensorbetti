@@ -122,6 +122,13 @@ def Tinv(T):
         return sum(e * m for e, m in zip(random_vector(F, n), T)).adjugate().list()
     return ParameterizedVariety(samp)
 
+def Tprimal(T):
+    F = T[0].base_ring()
+    n = len(T)
+    def samp():
+        return sum(e * m for e, m in zip(random_vector(F, n), T)).list()
+    return ParameterizedVariety(samp)
+
 # returns the parameterized variety of the gauss map of p applied to the linear
 # subspace
 def gauss_map(T,p):
