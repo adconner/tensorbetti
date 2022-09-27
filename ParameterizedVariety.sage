@@ -1,4 +1,5 @@
 from functools import cache
+import numpy as np
 
 class ParameterizedVariety:
     def __init__(self, samp):
@@ -12,22 +13,47 @@ class ParameterizedVariety:
     def sampm(self, mis, cnt=1):
         if len(mis) == 0:
             return matrix(self.F,cnt,0)
-        if self.p > 0 and self.p < 2**31 and self.F == GF(self.p):
-            import numpy as np
-            dtype = np.int16 if self.p < 2**7 else np.int32 if self.p < 2**15 else np.int64
-            samps = np.array([self.samp() for _ in range(cnt)],dtype=dtype)
-            mis = np.array(mis)
-            res = samps[:,mis[:,0]]
-            for i in range(1,mis.shape[1]):
-                res *= samps[:,mis[:,i]]
-                res %= self.p
-            return matrix(self.F,res)
-        else:
-            samps = []
-            for _ in range(cnt):
-                s = self.samp()
-                samps.append([prod(s[i] for i in mi) for mi in mis])
-            return matrix(self.F,samps)
+        samps = []
+        for _ in range(cnt):
+            s = self.samp()
+            samps.append([prod(s[i] for i in mi) for mi in mis])
+        return matrix(self.F,samps)
+
+    def sampm_numpy(self, mis, cnt=1):
+        assert self.p > 0 and self.p < 2**31 and self.F == GF(self.p)
+        dtype = np.int16 if self.p < 2**7 else np.int32 if self.p < 2**15 else np.int64
+        if len(mis) == 0:
+            return np.zeros((cnt,0),dtype=dtype)
+        samps = np.array([self.samp() for _ in range(cnt)],dtype=dtype)
+        mis = np.array(mis)
+        res = samps[:,mis[:,0]]
+        for i in range(1,mis.shape[1]):
+            # print(i,end=' ',flush=True)
+            res *= samps[:,mis[:,i]]
+            res %= self.p
+        return res
+
+    def sampp(self, ps, cnt=1):
+        mis = []
+        misix = {}
+        P = [[] for _ in ps]
+        for pi,p in enumerate(ps):
+            for m in p.monomials():
+                mi = tuple(i for i,e in m.exponents()[0].sparse_iter() for _ in range(e))
+                if mi not in misix:
+                    misix[mi] = len(mis)
+                    mis.append(mi)
+                P[pi].append((misix[mi],int(p.monomial_coefficient(m))))
+        try:
+            samp = self.sampm_numpy(mis,cnt)
+            P = [np.array(p) for p in P]
+            eqs = matrix(self.F,[ np.sum( (samp[:,p[:,0]]*p[:,1]) % self.p, axis = 1) %
+                self.p for p in P]).T
+            return eqs
+        except AssertionError:
+            samp = self.sampm(mis,cnt)
+            P = matrix(self.F,len(ps),len(mis),{(i,j) : e  for i,p in enumerate(P) for j,e in p})
+            return samp * P.T
 
     @cache
     def ideal_to(self, d):
@@ -48,7 +74,7 @@ class ParameterizedVariety:
         # ]
         print("%d monomials undetermined, " % len(ms),end="",flush=True)
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
-        eqs = self.sampm(mis, len(mis))
+        eqs = matrix(self.F,self.sampm_numpy(mis, len(mis)))
         pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
         if len(pscur) == 0:
@@ -70,18 +96,7 @@ class ParameterizedVariety:
         ps = [m - J.reduce(m) for m in ltJd]
         ps.sort(reverse=True)
         print("%d monomials undetermined, " % len(ps),end="",flush=True)
-        mis = []
-        misix = {}
-        P = {}
-        for pi,p in enumerate(ps):
-            for m in p.monomials():
-                mi = tuple(i for i,e in m.exponents()[0].sparse_iter() for _ in range(e))
-                if mi not in misix:
-                    misix[mi] = len(mis)
-                    mis.append(mi)
-                P[(pi,misix[mi])] = p.monomial_coefficient(m)
-        P = matrix(self.F,len(ps),len(mis),P)
-        eqs = self.sampm(mis,len(ps)) * P.T
+        eqs = self.sampp(ps,len(ps))
         pscur = [sum(a*p for a,p in zip(r,ps)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
         return Ilower + pscur
