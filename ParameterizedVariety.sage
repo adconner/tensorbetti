@@ -1,5 +1,6 @@
 from functools import cache
 import numpy as np
+from builtins import sum
 
 class ParameterizedVariety:
     def __init__(self, samp):
