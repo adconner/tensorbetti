@@ -18,7 +18,8 @@ class ParameterizedVariety:
             return self.R.ideal()
         Ilower = self.ideal_to(d - 1)
         print("getting component of ideal in degree %d" % d)
-        ltI = ideal([p.lm() for p in Ilower.groebner_basis(deg_bound=d)])
+        Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
+        ltI = ideal([p.lm() for p in Ilower.gens()])
         ms = [
             (mi, m)
             for mi in combinations_with_replacement(range(self.R.ngens()), d)
@@ -30,8 +31,10 @@ class ParameterizedVariety:
         eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
         pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
-        gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
-        return self.R.ideal(gbto)
+        if len(pscur) == 0:
+            return Ilower
+        else:
+            return self.R.ideal((Ilower + pscur).groebner_basis(deg_bound=d))
     
     @cache
     def ideal_to_intersect(self, d, J):
@@ -39,7 +42,8 @@ class ParameterizedVariety:
             return self.R.ideal()
         Ilower = self.ideal_to_intersect(d - 1, J)
         print("getting component of ideal in degree %d" % d)
-        ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.groebner_basis(deg_bound=d) if not p.is_zero()]
+        Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
+        ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.gens() if not p.is_zero()]
         ltJ = [tuple(p.lm().exponents()[0]) for p in J.groebner_basis() if not p.is_zero()]
         ltJd = [self.R.monomial(*m) for m in monomial_ideal_component(ltJ, d, ltI)]
         ps = [m - J.reduce(m) for m in ltJd]
@@ -48,8 +52,11 @@ class ParameterizedVariety:
                          for s in [self.samp()]])
         pscur = [sum(a*p for a,p in zip(r,ps)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
-        gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
-        return self.R.ideal(gbto)
+        if len(pscur) == 0:
+            return Ilower
+        else:
+            gbto = (Ilower + pscur).groebner_basis(deg_bound=d)
+            return self.R.ideal(gbto)
 
     @cache
     def Id_mod_lower_basis(self, d):
