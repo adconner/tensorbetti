@@ -19,13 +19,17 @@ class ParameterizedVariety:
         Ilower = self.ideal_to(d - 1)
         print("getting component of ideal in degree %d" % d)
         Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
-        ltI = ideal([p.lm() for p in Ilower.gens()])
-        ms = [
-            (mi, m)
-            for mi in combinations_with_replacement(range(self.R.ngens()), d)
-            for m in [prod(self.R.gen(i) for i in mi)]
-            if m not in ltI
-        ]
+        print ('mic')
+        ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.gens() if not p.is_zero()]
+        ms = [(tuple(i for i,e in enumerate(m) for _ in range(e)) ,self.R.monomial(*m)) 
+                for m in monomial_ideal_complement(self.R.ngens(), d, ltI)]
+        # ltI = self.R.ideal([p.lm() for p in Ilower.gens() if not p.is_zero()])
+        # ms = [
+        #     (mi, m)
+        #     for mi in combinations_with_replacement(range(self.R.ngens()), d)
+        #     for m in [prod(self.R.gen(i) for i in mi)]
+        #     if m not in ltI2
+        # ]
         print("%d monomials undetermined, " % len(ms),end="",flush=True)
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
         eqs = matrix(self.F, [self.sampm(mis) for i in range(len(mis))])
