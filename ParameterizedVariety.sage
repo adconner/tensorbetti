@@ -102,6 +102,14 @@ class ParameterizedVariety:
         print ("%d relations found" % len(pscur))
         return Ilower + pscur
 
+    def ideal_to_intersect_minors(self, d, r):
+        n = int(sqrt(self.R.ngens()))
+        if n*n != self.R.ngens():
+            raise ValueError("Number of variables must be a square")
+        X = symbolic_matrix(n, self.F)
+        J = self.R.ideal(X.minors(r))
+        return self.ideal_to_intersect(d,J)
+
     @cache
     def Id_mod_lower_basis(self, d):
         I = self.ideal_to(d - 1)
