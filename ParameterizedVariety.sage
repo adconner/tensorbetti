@@ -57,12 +57,13 @@ class ParameterizedVariety:
             return samp * P.T
 
     @cache
-    def ideal_to(self, d):
+    def ideal_to(self, d, usegb = False):
         if d <= 0:
             return self.R.ideal()
-        Ilower = self.ideal_to(d - 1)
+        Ilower = self.ideal_to(d - 1, usegb)
         print("getting component of ideal in degree %d" % d)
-        Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
+        if usegb:
+            Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
         ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.gens() if not p.is_zero()]
         ms = [(tuple(i for i,e in enumerate(m) for _ in range(e)) ,self.R.monomial(*m)) 
                 for m in monomial_ideal_complement(self.R.ngens(), d, ltI)]
@@ -74,23 +75,23 @@ class ParameterizedVariety:
         #     if m not in ltI
         # ]
         print("%d monomials undetermined, " % len(ms),end="",flush=True)
+        ms.sort(key = lambda p : p[1], reverse=True)
         mis, ms = [mi for mi, _ in ms], [m for _, m in ms]
         eqs = matrix(self.F,self.sampm_numpy(mis, len(mis)))
         pscur = [sum(a*m for a,m in zip(r,ms)) for r in eqs.right_kernel_matrix()]
         print ("%d relations found" % len(pscur))
-        if len(pscur) == 0:
-            return Ilower
-        else:
-            return self.R.ideal((Ilower + pscur).groebner_basis(deg_bound=d))
+        return Ilower + pscur
     
     @cache
-    def ideal_to_intersect(self, d, J=None):
+    def ideal_to_intersect(self, d, J=None, usegb = False):
         if J is None:
             J = self.R.ideal(1)
         if d <= 0:
             return self.R.ideal()
-        Ilower = self.ideal_to_intersect(d - 1, J)
+        Ilower = self.ideal_to_intersect(d - 1, J, usegb)
         print("getting component of ideal in degree %d" % d)
+        if usegb:
+            Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
         ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.gens() if not p.is_zero()]
         ltJ = [tuple(p.lm().exponents()[0]) for p in J.groebner_basis() if not p.is_zero()]
         ltJd = [self.R.monomial(*m) for m in monomial_ideal_component(ltJ, d, ltI)]
