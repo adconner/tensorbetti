@@ -1,5 +1,17 @@
 
-def monomial_ideal_complement(n, deg, ms):
+def monomial_ideal_component(I,deg,J):
+    R = I.ring()
+    n = R.ngens()
+    component = []
+    for m in I.gens():
+        if m.degree() > deg or m in J:
+            continue
+        Jcur = R.ideal([n.quo_rem(n.gcd(m))[0] for n in J.gens()])
+        component.extend([n*m for n in Jcur.normal_basis(deg-m.degree())])
+        J += m
+    return component
+
+def monomial_ideal_complement_evec(n, deg, ms):
     if deg < 0:
         return []
     def search(lb,ub,slb,i):
@@ -27,7 +39,7 @@ def monomial_ideal_complement(n, deg, ms):
                     return
     return search([0]*n,[deg]*n,0,0)
 
-def monomial_ideal_component(ms, deg, less=[]):
+def monomial_ideal_component_evec(ms, deg, less=[]):
     n = len(ms[0])
     less = copy(less)
     for m in ms:

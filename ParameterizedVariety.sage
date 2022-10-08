@@ -85,9 +85,9 @@ class ParameterizedVariety:
         print("getting component of ideal in degree %d" % d)
         if usegb:
             Ilower = self.R.ideal(Ilower.groebner_basis(deg_bound=d))
-        ltI = [tuple(p.lm().exponents()[0]) for p in Ilower.gens() if not p.is_zero()]
-        ltJ = [tuple(p.lm().exponents()[0]) for p in J.groebner_basis() if not p.is_zero()]
-        ltJd = [self.R.monomial(*m) for m in monomial_ideal_component(ltJ, d, ltI)]
+        ltI = self.R.ideal([p.lm() for p in Ilower.gens() if not p.is_zero()])
+        ltJ = self.R.ideal([p.lm() for p in J.groebner_basis() if not p.is_zero()])
+        ltJd = monomial_ideal_component(ltJ, d, ltI)
         ps = [m - J.reduce(m) for m in ltJd]
         ps.sort(reverse=True)
         print("%d monomials undetermined, " % len(ps),end="",flush=True)
