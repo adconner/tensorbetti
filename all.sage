@@ -12,5 +12,6 @@ attach('matroid.sage')
 attach('tensorbetti.sage')
 attach('ideal_utils.sage')
 attach('monomial_ideal.py')
+attach('tensors.sage')
 
 # vim: ft=python
