@@ -20,15 +20,25 @@ def random_tensor_gen(F, a, b, c, r):
     return sum_rank_ones([(random_vector(F, a), random_vector(F,b), random_vector(F,c)) 
             for i in range(r)])
                          
+def onegeneric222():
+    Ts = tensors22c(3,False)
+    Ts = [ dict_to_tensor(3,2,2,{ (k,i,j) : e for (i,j,k),e in T.items() }) for T in Ts]
+    Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 2]
+    Ts = [T[:-1] for T in Ts if T[-1].is_zero()]
+    Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
+    return Ts
+    
 def onegeneric322():
     Ts = tensors22c(3,False)
     Ts = [ dict_to_tensor(3,2,2,{ (k,i,j) : e for (i,j,k),e in T.items() }) for T in Ts]
     Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 2]
+    Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
     return Ts
     
 def onegeneric233():
     Ts = tensors23c(3)
     Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 3]
+    Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
     return Ts
 
 # returns the parameterized variety of the gauss map of p applied to the linear
