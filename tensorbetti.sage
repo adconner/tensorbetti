@@ -20,7 +20,7 @@ def random_tensor_gen(F, a, b, c, r):
     return sum_rank_ones([(random_vector(F, a), random_vector(F,b), random_vector(F,c)) 
             for i in range(r)])
                          
-def onegeneric222():
+def onegeneric222(F=GF(32003)):
     Ts = tensors22c(3,False)
     Ts = [ dict_to_tensor(3,2,2,{ (k,i,j) : e for (i,j,k),e in T.items() }) for T in Ts]
     # filter to 222
@@ -29,23 +29,26 @@ def onegeneric222():
     Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 2]
     # filter to concise
     Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
+    Ts = [[m.change_ring(F) for m in T] for T in Ts]
     return Ts
     
-def onegeneric322():
+def onegeneric322(F=GF(32003)):
     Ts = tensors22c(3,False)
     Ts = [ dict_to_tensor(3,2,2,{ (k,i,j) : e for (i,j,k),e in T.items() }) for T in Ts]
     # filter to 1_A generic
     Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 2]
     # filter to concise
     Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
+    Ts = [[m.change_ring(F) for m in T] for T in Ts]
     return Ts
     
-def onegeneric233():
+def onegeneric233(F=GF(32003)):
     Ts = tensors23c(3)
     # filter to 1_A generic
     Ts = [T for T in Ts if sum(ZZ.random_element(10**6)*m for m in T).rank() == 3]
     # filter to concise
     Ts = [T for T in Ts if all(not m.is_zero() for m in T)]
+    Ts = [[m.change_ring(F) for m in T] for T in Ts]
     return Ts
 
 # returns the parameterized variety of the gauss map of p applied to the linear
