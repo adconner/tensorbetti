@@ -85,4 +85,8 @@ def dual_tensor(T):
     K = matrix([m.list() for m in T]).right_kernel_matrix()
     return [matrix(K.base_ring(),T[0].nrows(),T[0].ncols(),list(r)) for r in K] 
 
+def ideal_write(I, f = 'examples/I.txt'):
+    with open(f, "w") as f:
+        f.write(",\n".join(map(str, I.gens())) + "\n")
+
 # vim: ft=python
